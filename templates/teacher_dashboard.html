@@ -34,6 +34,12 @@
         .discussion p { white-space: pre-wrap; overflow-wrap: anywhere; }
         .reply { margin: 10px 0 0 18px; padding-left: 12px; border-left: 3px solid #dbe7f0; }
         .reply-form textarea { min-height: 70px; }
+        .post-actions { float: right; position: relative; }
+        .post-actions summary { cursor: pointer; padding: 2px 7px; color: #174A7C; font-size: 20px; list-style: none; }
+        .post-actions summary::-webkit-details-marker { display: none; }
+        .post-actions menu { position: absolute; right: 0; z-index: 2; min-width: 140px; padding: 8px; margin: 0; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 6px #0002; }
+        .post-actions button { width: 100%; margin: 2px 0; padding: 6px 8px; text-align: left; }
+        .post-actions .delete-button { background: #9b2c2c; }
         @media (max-width: 600px) {
             .header-content { display: block; }
             nav { margin-top: 12px; }
@@ -82,12 +88,41 @@
             </form>
         </section>
         <section class="panel">
+            <h2>Notifications</h2>
+            {% if notifications %}
+                {% for notification in notifications %}
+                    <p class="help"><strong>{{ notification[2] }}</strong><br>{{ notification[1] }}</p>
+                {% endfor %}
+            {% else %}
+                <p class="empty">You have no notifications.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
             <h2>Messages received</h2>
             {% if inbox_messages %}
                 {% for message in inbox_messages %}
                     <article class="discussion">
+                        <details class="post-actions">
+                            <summary aria-label="Message actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('teacher.delete_inbox_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Remove this message from your inbox?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
                         <p>{{ message[3] }}</p>
                         <p class="help">From {{ message[1] }} ({{ message[2] }}) · {{ message[6] }} · AI: {{ message[4] }} ({{ "%.2f"|format(message[5] * 100) }}%)</p>
+                        {% if message[4].startswith("Cyberbullying") %}
+                            <p class="help"><strong>Notice:</strong> This message was identified as possible cyberbullying and has been reported to the administrator.</p>
+                        {% endif %}
                     </article>
                 {% endfor %}
             {% else %}
@@ -99,8 +134,26 @@
             {% if sent_messages %}
                 {% for message in sent_messages %}
                     <article class="discussion">
+                        <details class="post-actions">
+                            <summary aria-label="Message actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('teacher.delete_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this message?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
                         <p>{{ message[3] }}</p>
                         <p class="help">To {{ message[1] }} ({{ message[2] }}) · {{ message[6] }} · AI: {{ message[4] }} ({{ "%.2f"|format(message[5] * 100) }}%)</p>
+                        {% if message[4].startswith("Cyberbullying") %}
+                            <p class="help"><strong>Notice:</strong> This message was identified as possible cyberbullying and has been reported to the administrator.</p>
+                        {% endif %}
                     </article>
                 {% endfor %}
             {% else %}
@@ -112,11 +165,43 @@
             {% if announcements %}
                 {% for announcement in announcements %}
                     <article class="announcement">
+                        <details class="post-actions">
+                            <summary aria-label="Announcement actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('teacher.delete_announcement') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this announcement?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
                         <h3>{{ announcement[1] }}</h3>
                         <p>{{ announcement[2] }}</p>
                         <p class="meta">{{ announcement[6] }} · Created {{ announcement[5] }} · Detection: {{ announcement[3] }} · Confidence: {{ "%.2f"|format(announcement[4] * 100) }}%</p>
                         {% for reply in announcement_replies if reply[0] == announcement[0] %}
                             <div class="reply">
+                                <details class="post-actions">
+                                    <summary aria-label="Reply actions">...</summary>
+                                    <menu>
+                                        <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="reply_id" value="{{ reply[6] }}">
+                                            <button type="submit">Report</button>
+                                        </form>
+                                        {% if reply[7] == session.get("teacher_user_id") %}
+                                        <form action="{{ url_for('discussion.delete_discussion_item') }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="reply_id" value="{{ reply[6] }}">
+                                            <button class="delete-button" type="submit" onclick="return confirm('Delete this reply?')">Delete</button>
+                                        </form>
+                                        {% endif %}
+                                    </menu>
+                                </details>
                                 <p><strong>{{ reply[1] }}</strong> ({{ reply[2] }}) · {{ reply[4] }}</p>
                                 <p>{{ reply[3] }}</p>
                             </div>

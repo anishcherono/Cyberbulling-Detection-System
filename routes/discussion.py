@@ -20,6 +20,117 @@ def _login_redirect():
     return redirect(url_for("auth.student_login"))
 
 
+@discussion_bp.route("/blog-message-delete", methods=["POST"])
+def delete_message():
+    user_id, _ = _current_user()
+    if user_id is None:
+        return _login_redirect()
+    message_id = request.form.get("message_id", type=int)
+    if message_id is None:
+        return "A message is required.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+            (message_id,),
+        )
+        cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+        cursor.execute(
+            "DELETE FROM Messages WHERE message_id = %s AND sender_id = %s",
+            (message_id, user_id),
+        )
+        if cursor.rowcount == 0:
+            return "You can only delete your own messages.", 403
+    return redirect(url_for("discussion.blog"))
+
+
+@discussion_bp.route("/discussion-delete", methods=["POST"])
+def delete_discussion_item():
+    user_id, _ = _current_user()
+    if user_id is None:
+        return _login_redirect()
+    announcement_id = request.form.get("announcement_id", type=int)
+    reply_id = request.form.get("reply_id", type=int)
+    if (announcement_id is None) == (reply_id is None):
+        return "Choose one discussion item to delete.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        if announcement_id is not None:
+            cursor.execute(
+                "UPDATE Reports SET announcement_id = NULL WHERE announcement_id = %s",
+                (announcement_id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM Announcements
+                WHERE announcement_id = %s AND teacher_id = %s
+                """,
+                (announcement_id, user_id),
+            )
+        else:
+            cursor.execute(
+                "UPDATE Reports SET reply_id = NULL WHERE reply_id = %s",
+                (reply_id,),
+            )
+            cursor.execute(
+                """
+                DELETE FROM DiscussionReplies
+                WHERE reply_id = %s AND author_id = %s
+                """,
+                (reply_id, user_id),
+            )
+        if cursor.rowcount == 0:
+            return "You can only delete your own discussion items.", 403
+    return redirect(url_for("discussion.blog"))
+
+
+@discussion_bp.route("/content-report", methods=["POST"])
+def report_content():
+    user_id, _ = _current_user()
+    if user_id is None:
+        return _login_redirect()
+    message_id = request.form.get("message_id", type=int)
+    announcement_id = request.form.get("announcement_id", type=int)
+    reply_id = request.form.get("reply_id", type=int)
+    reason = (request.form.get("reason") or "Content reported by a user.").strip()
+    targets = [message_id, announcement_id, reply_id]
+    if sum(target is not None for target in targets) != 1:
+        return "Choose one item to report.", 400
+    if len(reason) > 1000:
+        return "Report reason must be 1000 characters or fewer.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        if message_id is not None:
+            cursor.execute("SELECT message_id FROM Messages WHERE message_id = %s", (message_id,))
+        elif announcement_id is not None:
+            cursor.execute(
+                "SELECT announcement_id FROM Announcements WHERE announcement_id = %s",
+                (announcement_id,),
+            )
+        else:
+            cursor.execute(
+                "SELECT reply_id FROM DiscussionReplies WHERE reply_id = %s",
+                (reply_id,),
+            )
+        if cursor.fetchone() is None:
+            return "The item no longer exists.", 404
+        cursor.execute(
+            """
+            INSERT INTO Reports
+            (message_id, announcement_id, reply_id, reported_by,
+             reason, action_taken, status)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                message_id,
+                announcement_id,
+                reply_id,
+                user_id,
+                reason,
+                "Pending",
+                "Pending",
+            ),
+        )
+    return redirect(url_for("discussion.blog"))
+
+
 @discussion_bp.route("/message-recipients")
 def message_recipients():
     user_id, _ = _current_user()
@@ -113,7 +224,8 @@ def blog():
         cursor.execute(
             """
             SELECT m.message_id, u.full_name, u.role, m.message_text,
-                   DATE_FORMAT(m.date_sent, '%Y-%m-%d %H:%i') AS posted_at
+                   DATE_FORMAT(m.date_sent, '%Y-%m-%d %H:%i') AS posted_at,
+                   m.sender_id
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
             WHERE m.recipient_id IS NULL
@@ -126,7 +238,8 @@ def blog():
         cursor.execute(
             """
             SELECT a.announcement_id, u.full_name, a.title, a.content,
-                   DATE_FORMAT(a.date_created, '%Y-%m-%d %H:%i') AS posted_at
+                   DATE_FORMAT(a.date_created, '%Y-%m-%d %H:%i') AS posted_at,
+                   a.teacher_id
             FROM Announcements a
             JOIN Users u ON a.teacher_id = u.user_id
             WHERE a.status = 'published'
@@ -139,7 +252,8 @@ def blog():
             """
             SELECT r.reply_id, r.message_id, r.announcement_id,
                    u.full_name, u.role, r.reply_text,
-                   DATE_FORMAT(r.date_created, '%Y-%m-%d %H:%i') AS posted_at
+                   DATE_FORMAT(r.date_created, '%Y-%m-%d %H:%i') AS posted_at,
+                   r.author_id
             FROM DiscussionReplies r
             JOIN Users u ON r.author_id = u.user_id
             WHERE r.status = 'checked'

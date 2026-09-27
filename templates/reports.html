@@ -18,7 +18,7 @@
         .panel { padding: 22px; background: #fff; border: 1px solid #d6d6d6; }
         .panel h2 { margin-top: 0; }
         .table-wrap { overflow-x: auto; }
-        table { width: 100%; min-width: 900px; border-collapse: collapse; }
+        table { width: 100%; min-width: 1250px; border-collapse: collapse; }
         th, td { padding: 12px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid #ddd; }
         th { color: #fff; background: #174A7C; font-weight: normal; }
         td { overflow-wrap: anywhere; }
@@ -52,7 +52,11 @@
                         <thead>
                             <tr>
                                 <th>Report</th>
-                                <th>Message</th>
+                                <th>Reported content</th>
+                                <th>Sender</th>
+                                <th>Recipient</th>
+                                <th>AI result</th>
+                                <th>Content status</th>
                                 <th>Reported by</th>
                                 <th>Reason</th>
                                 <th>Date</th>
@@ -65,24 +69,34 @@
                             {% for report in reports %}
                                 <tr>
                                     <td>{{ report[0] }}</td>
-                                    <td>{{ report[1] }}</td>
                                     <td>{{ report[2] }}</td>
+                                    <td>{{ report[8] or "Not available" }}</td>
+                                    <td>{{ report[9] or "Public post or reply" }}</td>
+                                    <td>
+                                        {% if report[10] %}
+                                            {{ report[10] }} ({{ "%.2f"|format(report[11] * 100) }}%)
+                                        {% else %}
+                                            Not available
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ report[12] or "Not available" }}</td>
                                     <td>{{ report[3] }}</td>
                                     <td>{{ report[4] }}</td>
+                                    <td>{{ report[5] }}</td>
                                         <td>
                                             <select name="action_taken" form="report-form-{{ report[0] }}" required>
                                                 <option value="">Select action</option>
-                                                <option value="Message reviewed" {% if report[5] == "Message reviewed" %}selected{% endif %}>Message reviewed</option>
-                                                <option value="Warning issued" {% if report[5] == "Warning issued" %}selected{% endif %}>Warning issued</option>
-                                                <option value="User contacted" {% if report[5] == "User contacted" %}selected{% endif %}>User contacted</option>
-                                                <option value="No action required" {% if report[5] == "No action required" %}selected{% endif %}>No action required</option>
+                                                <option value="Message reviewed" {% if report[6] == "Message reviewed" %}selected{% endif %}>Message reviewed</option>
+                                                <option value="Warning issued" {% if report[6] == "Warning issued" %}selected{% endif %}>Warning issued</option>
+                                                <option value="User contacted" {% if report[6] == "User contacted" %}selected{% endif %}>User contacted</option>
+                                                <option value="No action required" {% if report[6] == "No action required" %}selected{% endif %}>No action required</option>
                                             </select>
                                         </td>
                                         <td>
                                             <select name="status" form="report-form-{{ report[0] }}" required>
                                                 <option value="">Select status</option>
-                                                <option value="Reviewed" {% if report[6] == "Reviewed" %}selected{% endif %}>Reviewed</option>
-                                                <option value="Resolved" {% if report[6] == "Resolved" %}selected{% endif %}>Resolved</option>
+                                                <option value="Reviewed" {% if report[7] == "Reviewed" %}selected{% endif %}>Reviewed</option>
+                                                <option value="Resolved" {% if report[7] == "Resolved" %}selected{% endif %}>Resolved</option>
                                             </select>
                                         </td>
                                         <td>
@@ -90,6 +104,14 @@
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <button type="submit">Save</button>
                                             </form>
+                                            {% if report[1] %}
+                                            <form action="{{ url_for('admin.delete_reported_message') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="report_id" value="{{ report[0] }}">
+                                                <input name="reason" maxlength="1000" placeholder="Deletion reason" required>
+                                                <button type="submit" onclick="return confirm('Delete this reported message permanently?')">Delete message</button>
+                                            </form>
+                                            {% endif %}
                                         </td>
                                 </tr>
                             {% endfor %}

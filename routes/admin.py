@@ -9,6 +9,54 @@ def _admin_login_redirect():
     return redirect(url_for("auth.admin_login"))
 
 
+def _delete_message_and_notify(cursor, message_id, reason):
+    cursor.execute(
+        """
+        SELECT sender_id FROM Messages
+        WHERE message_id = %s
+        """,
+        (message_id,),
+    )
+    message = cursor.fetchone()
+    if message is None:
+        return False
+    cursor.execute(
+        """
+        INSERT INTO Notifications
+        (user_id, notification_type, notification_message)
+        VALUES (%s, %s, %s)
+        """,
+        (
+            message[0],
+            "message_deleted",
+            f"An administrator deleted your message. Reason: {reason}",
+        ),
+    )
+    cursor.execute(
+        "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+        (message_id,),
+    )
+    cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+    cursor.execute("DELETE FROM Messages WHERE message_id = %s", (message_id,))
+    return True
+
+
+@admin_bp.route("/admin-delete-message", methods=["POST"])
+def delete_message():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+    message_id = request.form.get("message_id", type=int)
+    reason = (request.form.get("reason") or "").strip()
+    if message_id is None or not reason:
+        return "A message and deletion reason are required.", 400
+    if len(reason) > 1000:
+        return "Deletion reason must be 1000 characters or fewer.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        if not _delete_message_and_notify(cursor, message_id, reason):
+            return "The message no longer exists.", 404
+    return redirect(url_for("admin.admin_dashboard"))
+
+
 @admin_bp.route("/dashboard")
 @admin_bp.route("/admin")
 def admin_dashboard():
@@ -58,7 +106,8 @@ def admin_dashboard():
         cursor.execute(
             """
             SELECT Messages.message_id, Users.full_name, Messages.message_text,
-                   Messages.detection_result, Messages.confidence, Messages.status
+                   Messages.detection_result, Messages.confidence, Messages.status,
+                   Messages.sender_id
             FROM Messages JOIN Users ON Messages.sender_id = Users.user_id
             ORDER BY Messages.message_id DESC LIMIT 10
             """
@@ -108,14 +157,56 @@ def reports():
     with database_cursor() as (_, cursor):
         cursor.execute(
             """
-            SELECT Reports.report_id, Reports.message_id, Users.full_name, Reports.reason,
-                   Reports.date_reported, Reports.action_taken, Reports.status
-            FROM Reports JOIN Users ON Reports.reported_by = Users.user_id
+            SELECT Reports.report_id, Reports.message_id,
+                   COALESCE(Messages.message_text, Announcements.content,
+                            DiscussionReplies.reply_text) AS reported_content,
+                   Users.full_name, Reports.reason, Reports.date_reported,
+                   Reports.action_taken, Reports.status,
+                   sender.full_name, recipient.full_name,
+                   Messages.detection_result, Messages.confidence,
+                   Messages.status
+            FROM Reports
+            JOIN Users ON Reports.reported_by = Users.user_id
+            LEFT JOIN Messages ON Reports.message_id = Messages.message_id
+            LEFT JOIN Users sender ON Messages.sender_id = sender.user_id
+            LEFT JOIN Users recipient ON Messages.recipient_id = recipient.user_id
+            LEFT JOIN Announcements ON Reports.announcement_id = Announcements.announcement_id
+            LEFT JOIN DiscussionReplies ON Reports.reply_id = DiscussionReplies.reply_id
             ORDER BY Reports.report_id DESC
             """
         )
         report_rows = cursor.fetchall()
     return render_template("reports.html", reports=report_rows)
+
+
+@admin_bp.route("/admin-delete-reported-message", methods=["POST"])
+def delete_reported_message():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+    report_id = request.form.get("report_id", type=int)
+    reason = (request.form.get("reason") or "").strip()
+    if report_id is None or not reason:
+        return "A report and deletion reason are required.", 400
+    if len(reason) > 1000:
+        return "Deletion reason must be 1000 characters or fewer.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            "SELECT message_id FROM Reports WHERE report_id = %s",
+            (report_id,),
+        )
+        report = cursor.fetchone()
+        if report is None or report[0] is None:
+            return "This report does not contain an available message.", 404
+        if not _delete_message_and_notify(cursor, report[0], reason):
+            return "The reported message no longer exists.", 404
+        cursor.execute(
+            """
+            UPDATE Reports SET action_taken = %s, status = %s
+            WHERE report_id = %s
+            """,
+            ("Message deleted by administrator", "Resolved", report_id),
+        )
+    return redirect(url_for("admin.reports"))
 
 
 @admin_bp.route("/update-report/<int:report_id>", methods=["POST"])

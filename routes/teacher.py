@@ -12,6 +12,76 @@ def _teacher_required():
     return None
 
 
+@teacher_bp.route("/announcement-delete", methods=["POST"])
+def delete_announcement():
+    redirect_response = _teacher_required()
+    if redirect_response:
+        return redirect_response
+    announcement_id = request.form.get("announcement_id", type=int)
+    if announcement_id is None:
+        return "An announcement is required.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            "UPDATE Reports SET announcement_id = NULL WHERE announcement_id = %s",
+            (announcement_id,),
+        )
+        cursor.execute(
+            """
+            DELETE FROM Announcements
+            WHERE announcement_id = %s AND teacher_id = %s
+            """,
+            (announcement_id, session["teacher_user_id"]),
+        )
+        if cursor.rowcount == 0:
+            return "You can only delete your own announcements.", 403
+    return redirect(url_for("teacher.teacher_dashboard"))
+
+
+@teacher_bp.route("/lecturer-message-delete", methods=["POST"])
+def delete_message():
+    redirect_response = _teacher_required()
+    if redirect_response:
+        return redirect_response
+    message_id = request.form.get("message_id", type=int)
+    if message_id is None:
+        return "A message is required.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+            (message_id,),
+        )
+        cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+        cursor.execute(
+            "DELETE FROM Messages WHERE message_id = %s AND sender_id = %s",
+            (message_id, session["teacher_user_id"]),
+        )
+        if cursor.rowcount == 0:
+            return "You can only delete your own messages.", 403
+    return redirect(url_for("teacher.teacher_dashboard"))
+
+
+@teacher_bp.route("/lecturer-inbox-delete", methods=["POST"])
+def delete_inbox_message():
+    redirect_response = _teacher_required()
+    if redirect_response:
+        return redirect_response
+    message_id = request.form.get("message_id", type=int)
+    if message_id is None:
+        return "A message is required.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            INSERT IGNORE INTO MessageInboxDeletions (user_id, message_id)
+            SELECT %s, message_id FROM Messages
+            WHERE message_id = %s AND recipient_id = %s
+            """,
+            (session["teacher_user_id"], message_id, session["teacher_user_id"]),
+        )
+        if cursor.rowcount == 0:
+            return "You can only remove messages from your own inbox.", 403
+    return redirect(url_for("teacher.teacher_dashboard"))
+
+
 @teacher_bp.route("/teacher-dashboard")
 @teacher_bp.route("/lecturer-dashboard")
 def teacher_dashboard():
@@ -35,7 +105,7 @@ def teacher_dashboard():
         cursor.execute(
             """
             SELECT r.announcement_id, u.full_name, u.role, r.reply_text,
-                   r.date_created, r.status
+                   r.date_created, r.status, r.reply_id, r.author_id
             FROM DiscussionReplies r
             JOIN Users u ON r.author_id = u.user_id
             WHERE r.announcement_id IN (
@@ -55,10 +125,14 @@ def teacher_dashboard():
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
             WHERE m.recipient_id = %s
+              AND NOT EXISTS (
+                  SELECT 1 FROM MessageInboxDeletions d
+                  WHERE d.user_id = %s AND d.message_id = m.message_id
+              )
             ORDER BY m.message_id DESC
             LIMIT 20
             """,
-            (session["teacher_user_id"],),
+            (session["teacher_user_id"], session["teacher_user_id"]),
         )
         inbox_messages = cursor.fetchall()
         cursor.execute(
@@ -74,6 +148,17 @@ def teacher_dashboard():
             (session["teacher_user_id"],),
         )
         sent_messages = cursor.fetchall()
+        cursor.execute(
+            """
+            SELECT notification_id, notification_message, date_created
+            FROM Notifications
+            WHERE user_id = %s
+            ORDER BY notification_id DESC
+            LIMIT 10
+            """,
+            (session["teacher_user_id"],),
+        )
+        notifications = cursor.fetchall()
     return render_template(
         "teacher_dashboard.html",
         teacher_name=session["teacher_name"],
@@ -81,6 +166,7 @@ def teacher_dashboard():
         announcement_replies=announcement_replies,
         inbox_messages=inbox_messages,
         sent_messages=sent_messages,
+        notifications=notifications,
     )
 
 

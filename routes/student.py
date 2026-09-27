@@ -14,6 +14,49 @@ def _student_login_redirect():
     return redirect(url_for("auth.student_login"))
 
 
+@student_bp.route("/student-message-delete", methods=["POST"])
+def delete_message():
+    if not session.get("student_logged_in"):
+        return _student_login_redirect()
+    message_id = request.form.get("message_id", type=int)
+    if message_id is None:
+        return "A message is required.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+            (message_id,),
+        )
+        cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+        cursor.execute(
+            "DELETE FROM Messages WHERE message_id = %s AND sender_id = %s",
+            (message_id, session["student_user_id"]),
+        )
+        if cursor.rowcount == 0:
+            return "You can only delete your own messages.", 403
+    return redirect(url_for("student.student_dashboard"))
+
+
+@student_bp.route("/student-inbox-delete", methods=["POST"])
+def delete_inbox_message():
+    if not session.get("student_logged_in"):
+        return _student_login_redirect()
+    message_id = request.form.get("message_id", type=int)
+    if message_id is None:
+        return "A message is required.", 400
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            INSERT IGNORE INTO MessageInboxDeletions (user_id, message_id)
+            SELECT %s, message_id FROM Messages
+            WHERE message_id = %s AND recipient_id = %s
+            """,
+            (session["student_user_id"], message_id, session["student_user_id"]),
+        )
+        if cursor.rowcount == 0:
+            return "You can only remove messages from your own inbox.", 403
+    return redirect(url_for("student.student_dashboard"))
+
+
 @student_bp.route("/student-dashboard")
 def student_dashboard():
     if not session.get("student_logged_in"):
@@ -26,10 +69,14 @@ def student_dashboard():
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
             WHERE m.recipient_id = %s
+              AND NOT EXISTS (
+                  SELECT 1 FROM MessageInboxDeletions d
+                  WHERE d.user_id = %s AND d.message_id = m.message_id
+              )
             ORDER BY m.message_id DESC
             LIMIT 20
             """,
-            (session["student_user_id"],),
+            (session["student_user_id"], session["student_user_id"]),
         )
         inbox_messages = cursor.fetchall()
         cursor.execute(
@@ -45,11 +92,23 @@ def student_dashboard():
             (session["student_user_id"],),
         )
         sent_messages = cursor.fetchall()
+        cursor.execute(
+            """
+            SELECT notification_id, notification_message, date_created
+            FROM Notifications
+            WHERE user_id = %s
+            ORDER BY notification_id DESC
+            LIMIT 10
+            """,
+            (session["student_user_id"],),
+        )
+        notifications = cursor.fetchall()
     return render_template(
         "student_dashboard.html",
         student_name=session.get("student_name"),
         inbox_messages=inbox_messages,
         sent_messages=sent_messages,
+        notifications=notifications,
     )
 
 

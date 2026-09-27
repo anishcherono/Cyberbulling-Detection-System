@@ -28,6 +28,12 @@
         .reply:last-child { border-bottom: 0; }
         .reply p { margin: 3px 0; }
         .reply-form { margin-top: 12px; }
+        .post-actions { float: right; position: relative; }
+        .post-actions summary { cursor: pointer; padding: 2px 7px; color: #174A7C; font-size: 20px; list-style: none; }
+        .post-actions summary::-webkit-details-marker { display: none; }
+        .post-actions menu { position: absolute; right: 0; z-index: 2; min-width: 150px; padding: 8px; margin: 0; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 6px #0002; }
+        .post-actions button { width: 100%; margin: 2px 0; padding: 6px 8px; text-align: left; }
+        .post-actions .delete-button { background: #9b2c2c; }
         textarea { width: 100%; min-height: 72px; padding: 10px; font: inherit; border: 1px solid #aaa; border-radius: 3px; resize: vertical; }
         button { margin-top: 8px; padding: 8px 14px; color: #fff; background: #174A7C; border: 0; border-radius: 3px; cursor: pointer; }
         button:hover { background: #2F6F9F; }
@@ -79,12 +85,46 @@
             {% if announcements %}
                 {% for announcement in announcements %}
                     <article class="entry">
+                        <details class="post-actions">
+                            <summary aria-label="Announcement actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                {% if viewer_role == "Lecturer" and announcement[5] == session.get("teacher_user_id") %}
+                                <form action="{{ url_for('discussion.delete_discussion_item') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this announcement?')">Delete</button>
+                                </form>
+                                {% endif %}
+                            </menu>
+                        </details>
                         <h3>{{ announcement[2] }}</h3>
                         <p class="entry-content">{{ announcement[3] }}</p>
                         <p class="meta">Posted by {{ announcement[1] }} (Lecturer) · {{ announcement[4] }}</p>
                         <div class="reply-list">
                             {% for reply in replies if reply[2] == announcement[0] %}
                                 <div class="reply">
+                                    <details class="post-actions">
+                                        <summary aria-label="Reply actions">...</summary>
+                                        <menu>
+                                            <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reply_id" value="{{ reply[0] }}">
+                                                <button type="submit">Report</button>
+                                            </form>
+                                            {% if reply[7] == session.get("student_user_id") or reply[7] == session.get("teacher_user_id") %}
+                                            <form action="{{ url_for('discussion.delete_discussion_item') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reply_id" value="{{ reply[0] }}">
+                                                <button class="delete-button" type="submit" onclick="return confirm('Delete this reply?')">Delete</button>
+                                            </form>
+                                            {% endif %}
+                                        </menu>
+                                    </details>
                                     <p><strong>{{ reply[3] }}</strong> ({{ reply[4] }}) · {{ reply[6] }}</p>
                                     <p>{{ reply[5] }}</p>
                                 </div>
@@ -111,11 +151,45 @@
             {% if posts %}
                 {% for post in posts %}
                     <article class="entry">
+                        <details class="post-actions">
+                            <summary aria-label="Post actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ post[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                {% if post[5] == session.get("student_user_id") or post[5] == session.get("teacher_user_id") %}
+                                <form action="{{ url_for('discussion.delete_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ post[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this post?')">Delete</button>
+                                </form>
+                                {% endif %}
+                            </menu>
+                        </details>
                         <p class="entry-content">{{ post[3] }}</p>
                         <p class="meta">Posted by {{ post[1] }} ({{ post[2] }}) · {{ post[4] }}</p>
                         <div class="reply-list">
                             {% for reply in replies if reply[1] == post[0] %}
                                 <div class="reply">
+                                    <details class="post-actions">
+                                        <summary aria-label="Reply actions">...</summary>
+                                        <menu>
+                                            <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reply_id" value="{{ reply[0] }}">
+                                                <button type="submit">Report</button>
+                                            </form>
+                                            {% if reply[7] == session.get("student_user_id") or reply[7] == session.get("teacher_user_id") %}
+                                            <form action="{{ url_for('discussion.delete_discussion_item') }}" method="POST">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="reply_id" value="{{ reply[0] }}">
+                                                <button class="delete-button" type="submit" onclick="return confirm('Delete this reply?')">Delete</button>
+                                            </form>
+                                            {% endif %}
+                                        </menu>
+                                    </details>
                                     <p><strong>{{ reply[3] }}</strong> ({{ reply[4] }}) · {{ reply[6] }}</p>
                                     <p>{{ reply[5] }}</p>
                                 </div>

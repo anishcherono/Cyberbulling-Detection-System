@@ -589,6 +589,7 @@
                     <th>Confidence</th>
 
                     <th>Status</th>
+                    <th>Admin action</th>
 
                 </tr>
 
@@ -631,6 +632,14 @@
 
                     <td>
                         {{ message[5] }}
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.delete_message') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="message_id" value="{{ message[0] }}">
+                            <input name="reason" maxlength="1000" placeholder="Reason" required>
+                            <button class="read-button" type="submit" onclick="return confirm('Delete this message permanently?')">Delete</button>
+                        </form>
                     </td>
 
                 </tr>
