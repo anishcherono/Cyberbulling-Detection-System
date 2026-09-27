@@ -9,10 +9,11 @@
     </header>
     <section class="auth-panel">
         <h2>Student login</h2>
+        {% if error %}<p class="auth-error" role="alert">{{ error }}</p>{% endif %}
         <form method="POST" action="/student-login">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="identifier">Institution email</label>
-            <input id="identifier" type="email" name="identifier" autocomplete="email" required>
+            <input id="identifier" type="email" name="identifier" autocomplete="email" value="{{ identifier|default('') }}" required>
             <label for="password">Password</label>
             <input id="password" type="password" name="password" autocomplete="current-password" required>
             <button type="submit">Log in</button>

@@ -32,6 +32,14 @@ body {
 }
 .auth-panel button:hover { background: #2F6F9F; }
 .auth-help { color: #555; font-size: 14px; }
+.auth-error {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    color: #8a1c1c;
+    background: #fff0f0;
+    border: 1px solid #e0a4a4;
+    border-radius: 3px;
+}
 .auth-link { margin: 20px 0 0; text-align: center; }
 .auth-panel a { color: #174A7C; }
 @media (max-width: 480px) {

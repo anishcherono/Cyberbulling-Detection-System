@@ -57,25 +57,26 @@
         .cards {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .card {
             background-color: white;
-            padding: 25px;
+            padding: 14px 12px;
             text-align: center;
             border: 1px solid #d6d6d6;
         }
 
         .card h2 {
             margin: 0;
-            font-size: 30px;
+            font-size: 24px;
         }
 
         .card p {
-            margin-bottom: 0;
+            margin: 6px 0 0;
             color: #555;
+            font-size: 14px;
         }
 
         /* AI ANALYTICS */
@@ -88,25 +89,26 @@
         .analytics-cards {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 12px;
+            margin-bottom: 20px;
         }
 
         .analytics-card {
             background-color: white;
-            padding: 25px;
+            padding: 14px 12px;
             text-align: center;
             border: 1px solid #d6d6d6;
         }
 
         .analytics-card h2 {
             margin: 0;
-            font-size: 30px;
+            font-size: 24px;
         }
 
         .analytics-card p {
             color: #555;
-            margin-bottom: 0;
+            margin: 6px 0 0;
+            font-size: 14px;
         }
 
         .analytics-note {
@@ -129,10 +131,15 @@
 
         .section {
             background-color: white;
-            padding: 20px;
-            margin-bottom: 25px;
+            padding: 16px;
+            margin-bottom: 20px;
             border: 1px solid #d6d6d6;
             overflow-x: auto;
+        }
+
+        .section h2 {
+            margin-top: 0;
+            font-size: 20px;
         }
 
         /* TABLES */
@@ -140,19 +147,44 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 800px;
+            min-width: 720px;
         }
 
         th {
             background-color: #174A7C;
             color: white;
-            padding: 12px;
+            padding: 9px 10px;
             text-align: left;
+            white-space: nowrap;
         }
 
         td {
-            padding: 12px;
+            padding: 9px 10px;
             border-bottom: 1px solid #ddd;
+        }
+
+        .student-directory table {
+            min-width: 0;
+            table-layout: fixed;
+        }
+
+        .student-directory th:nth-child(1),
+        .student-directory td:nth-child(1) {
+            width: 32%;
+        }
+
+        .student-directory th:nth-child(2),
+        .student-directory td:nth-child(2) {
+            width: 24%;
+        }
+
+        .student-directory th:nth-child(3),
+        .student-directory td:nth-child(3) {
+            width: 44%;
+        }
+
+        .student-directory td {
+            overflow-wrap: anywhere;
         }
 
         /* ALERT */
@@ -192,9 +224,7 @@
 
         @media (max-width: 900px) {
 
-            .cards {
-                grid-template-columns: repeat(2, 1fr);
-            }
+            .cards { grid-template-columns: repeat(2, 1fr); }
 
             .analytics-cards {
                 grid-template-columns: 1fr;
@@ -208,9 +238,8 @@
 
         @media (max-width: 600px) {
 
-            .cards {
-                grid-template-columns: 1fr;
-            }
+            .cards,
+            .analytics-cards { grid-template-columns: 1fr; }
 
         }
 
@@ -276,29 +305,6 @@
 
             </div>
 
-            <div class="section">
-                <h2>Registered Students</h2>
-                {% if students %}
-                <table>
-                    <tr>
-                        <th>Student name</th>
-                        <th>Student ID</th>
-                        <th>Institution email</th>
-                    </tr>
-                    {% for student in students %}
-                    <tr>
-                        <td>{{ student[0] }}</td>
-                        <td>{{ student[1] or "Not provided" }}</td>
-                        <td>{{ student[2] or "Not provided" }}</td>
-                    </tr>
-                    {% endfor %}
-                </table>
-                {% else %}
-                <p>No student accounts have been registered yet.</p>
-                {% endif %}
-            </div>
-
-
             <div class="card">
 
                 <h2>{{ total_messages }}</h2>
@@ -326,6 +332,30 @@
             </div>
 
 
+        </div>
+
+        <!-- REGISTERED STUDENTS -->
+
+        <div class="section student-directory">
+            <h2>Registered Students</h2>
+            {% if students %}
+            <table>
+                <tr>
+                    <th>Student name</th>
+                    <th>Student ID</th>
+                    <th>Institution email</th>
+                </tr>
+                {% for student in students %}
+                <tr>
+                    <td>{{ student[0] }}</td>
+                    <td>{{ student[1] or "Not provided" }}</td>
+                    <td>{{ student[2] or "Not provided" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No student accounts have been registered yet.</p>
+            {% endif %}
         </div>
 
 
@@ -596,7 +626,7 @@
                     </td>
 
                     <td>
-                        {{ "%.2f"|format(message[4]) }}
+                        {{ "%.2f"|format(message[4] * 100) }}%
                     </td>
 
                     <td>

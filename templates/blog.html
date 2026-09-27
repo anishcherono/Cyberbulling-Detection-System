@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Institution Blog - Nish Institution</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; color: #222; background: #f5f5f5; }
+        header { color: #fff; background: #174A7C; }
+        .header-content, main { width: min(940px, 92%); margin: 0 auto; }
+        .header-content { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+        .title { margin: 0; font-size: 22px; font-weight: normal; }
+        nav { display: flex; gap: 8px; }
+        nav a { padding: 7px 12px; color: #fff; text-decoration: none; border: 1px solid #b9d0e1; border-radius: 3px; }
+        nav a:hover { background: #0F355A; }
+        main { padding: 28px 0 45px; }
+        .panel { padding: 22px; margin-bottom: 20px; background: #fff; border: 1px solid #d6d6d6; }
+        h1, h2, h3 { margin-top: 0; }
+        h2, h3 { color: #174A7C; }
+        .help, .meta { color: #555; font-size: 14px; }
+        .entry { padding: 16px 0; border-bottom: 1px solid #ddd; }
+        .entry:last-child { border-bottom: 0; }
+        .entry p { white-space: pre-wrap; overflow-wrap: anywhere; }
+        .entry-content { margin-bottom: 8px; }
+        .reply-list { margin: 12px 0 0 18px; padding-left: 14px; border-left: 3px solid #dbe7f0; }
+        .reply { padding: 7px 0; border-bottom: 1px solid #eee; }
+        .reply:last-child { border-bottom: 0; }
+        .reply p { margin: 3px 0; }
+        .reply-form { margin-top: 12px; }
+        textarea { width: 100%; min-height: 72px; padding: 10px; font: inherit; border: 1px solid #aaa; border-radius: 3px; resize: vertical; }
+        button { margin-top: 8px; padding: 8px 14px; color: #fff; background: #174A7C; border: 0; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #2F6F9F; }
+        .empty { color: #555; }
+        @media (max-width: 600px) {
+            .header-content { display: block; }
+            nav { margin-top: 12px; }
+            main { width: 94%; padding-top: 18px; }
+            .panel { padding: 17px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <p class="title">Nish Institution · Community Blog</p>
+            <nav aria-label="Blog navigation">
+                {% if viewer_role == "Lecturer" %}
+                    <a href="{{ url_for('teacher.teacher_dashboard') }}">Workspace</a>
+                    <a href="{{ url_for('auth.lecturer_logout') }}">Log out</a>
+                {% else %}
+                    <a href="{{ url_for('student.student_dashboard') }}">My Portal</a>
+                    <a href="{{ url_for('auth.student_logout') }}">Log out</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="panel">
+            <h1>Institution Blog</h1>
+            <p class="help">Discuss school information, student activities, and lecturer announcements respectfully.</p>
+        </section>
+
+        {% if viewer_role == "Student" %}
+        <section class="panel">
+            <h2>Create a blog post</h2>
+            <p class="help">Your post will be checked automatically before it appears publicly.</p>
+            <form action="{{ url_for('student.student_post') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="blog-message">Post message</label>
+                <textarea id="blog-message" name="message" maxlength="2000" required></textarea>
+                <button type="submit">Publish to blog</button>
+            </form>
+        </section>
+        {% endif %}
+
+        <section class="panel">
+            <h2>Lecturer announcements</h2>
+            {% if announcements %}
+                {% for announcement in announcements %}
+                    <article class="entry">
+                        <h3>{{ announcement[2] }}</h3>
+                        <p class="entry-content">{{ announcement[3] }}</p>
+                        <p class="meta">Posted by {{ announcement[1] }} (Lecturer) · {{ announcement[4] }}</p>
+                        <div class="reply-list">
+                            {% for reply in replies if reply[2] == announcement[0] %}
+                                <div class="reply">
+                                    <p><strong>{{ reply[3] }}</strong> ({{ reply[4] }}) · {{ reply[6] }}</p>
+                                    <p>{{ reply[5] }}</p>
+                                </div>
+                            {% else %}
+                                <p class="help">No replies yet.</p>
+                            {% endfor %}
+                        </div>
+                        <form class="reply-form" action="{{ url_for('discussion.create_reply') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                            <label for="announcement-reply-{{ announcement[0] }}">Reply to announcement</label>
+                            <textarea id="announcement-reply-{{ announcement[0] }}" name="message" maxlength="2000" required></textarea>
+                            <button type="submit">Reply</button>
+                        </form>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty">No lecturer announcements have been published yet.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <h2>Student discussions</h2>
+            {% if posts %}
+                {% for post in posts %}
+                    <article class="entry">
+                        <p class="entry-content">{{ post[3] }}</p>
+                        <p class="meta">Posted by {{ post[1] }} ({{ post[2] }}) · {{ post[4] }}</p>
+                        <div class="reply-list">
+                            {% for reply in replies if reply[1] == post[0] %}
+                                <div class="reply">
+                                    <p><strong>{{ reply[3] }}</strong> ({{ reply[4] }}) · {{ reply[6] }}</p>
+                                    <p>{{ reply[5] }}</p>
+                                </div>
+                            {% else %}
+                                <p class="help">No replies yet.</p>
+                            {% endfor %}
+                        </div>
+                        <form class="reply-form" action="{{ url_for('discussion.create_reply') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="message_id" value="{{ post[0] }}">
+                            <label for="post-reply-{{ post[0] }}">Reply to post</label>
+                            <textarea id="post-reply-{{ post[0] }}" name="message" maxlength="2000" required></textarea>
+                            <button type="submit">Reply</button>
+                        </form>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty">No student discussions have been started yet.</p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

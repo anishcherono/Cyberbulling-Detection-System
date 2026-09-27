@@ -132,15 +132,6 @@
             background: #2F6F9F;
         }
 
-        .posts-header {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 12px;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 4px;
-        }
-
         .post {
             padding: 18px 0;
             border-width: 0 0 1px;
@@ -189,6 +180,40 @@
             color: #555;
         }
 
+        .reply-list {
+            margin: 14px 0 0;
+            padding-left: 18px;
+            border-left: 3px solid #dbe7f0;
+        }
+
+        .reply {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .reply:last-child {
+            border-bottom: 0;
+        }
+
+        .reply p {
+            margin: 3px 0;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .reply-form {
+            margin-top: 12px;
+        }
+
+        .reply-form textarea {
+            min-height: 72px;
+        }
+
+        .reply-form button {
+            margin-top: 7px;
+            padding: 7px 12px;
+        }
+
         @media (max-width: 600px) {
             .header-content {
                 display: block;
@@ -212,9 +237,6 @@
                 padding: 17px;
             }
 
-            .posts-header {
-                display: block;
-            }
         }
     </style>
 </head>
@@ -225,6 +247,7 @@
             <p class="site-title">Nish Institution · Student Portal</p>
             <nav class="nav" aria-label="Student navigation">
                 <a href="/student-dashboard">My Portal</a>
+                <a href="/blog">Open Blog</a>
                 <a href="/student-logout">Log out</a>
             </nav>
         </div>
@@ -233,35 +256,21 @@
     <main>
         <section class="intro">
             <h1>Welcome, {{ student_name }}</h1>
-            <p>Use this portal to submit a message and review your recent posts.</p>
+            <p>Use this portal to send direct messages to students and lecturers.</p>
             <p class="help-text">
                 Submitted messages are automatically analysed by the cyberbullying
                 detection system.
             </p>
         </section>
 
-        <section class="panel" aria-labelledby="announcements-heading">
-            <h2 id="announcements-heading">Lecturer announcements</h2>
-            {% if announcements %}
-                {% for announcement in announcements %}
-                    <article class="post">
-                        <h3>{{ announcement[0] }}</h3>
-                        <p class="post-message">{{ announcement[1] }}</p>
-                        <p class="post-details">
-                            <span><strong>From:</strong> {{ announcement[2] }}</span>
-                            <span><strong>Published:</strong> {{ announcement[3] }}</span>
-                        </p>
-                    </article>
-                {% endfor %}
-            {% else %}
-                <p class="empty-state">There are no teacher announcements yet.</p>
-            {% endif %}
-        </section>
-
-        <section class="panel" aria-labelledby="create-post-heading">
-            <h2 id="create-post-heading">Create a post</h2>
-            <form action="/student-post" method="POST">
+        <section class="panel" aria-labelledby="message-heading">
+            <h2 id="message-heading">Send a direct message</h2>
+            <p class="help-text">Search for a student or lecturer using their institution email.</p>
+            <form action="/message-send" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="student-recipient">Recipient institution email</label>
+                <input id="student-recipient" name="recipient_email" type="email" list="student-recipient-results" autocomplete="off" required>
+                <datalist id="student-recipient-results"></datalist>
                 <label for="message">Message</label>
                 <textarea
                     id="message"
@@ -269,50 +278,62 @@
                     placeholder="Write your message here..."
                     maxlength="2000"
                     required></textarea>
-                <button type="submit">Submit for analysis</button>
+                <button type="submit">Send message</button>
             </form>
         </section>
 
-        <section class="panel" aria-labelledby="recent-posts-heading">
-            <div class="posts-header">
-                <h2 id="recent-posts-heading">My recent posts</h2>
-                <span class="help-text">Showing your latest 10 posts</span>
-            </div>
-
-            {% if posts %}
-                {% for post in posts %}
+        <section class="panel">
+            <h2>Messages received</h2>
+            {% if inbox_messages %}
+                {% for message in inbox_messages %}
                     <article class="post">
-                        <p class="post-message">{{ post[1] }}</p>
+                        <p class="post-message">{{ message[3] }}</p>
                         <p class="post-details">
-                            <span><strong>Detection:</strong> {{ post[2] }}</span>
-                            <span><strong>Confidence:</strong> {{ "%.2f"|format(post[3]) }}</span>
-                            <span><strong>Posted:</strong> {{ post[4] }}</span>
+                            <span><strong>From:</strong> {{ message[1] }} ({{ message[2] }})</span>
+                            <span><strong>Received:</strong> {{ message[6] }}</span>
+                            <span><strong>AI:</strong> {{ message[4] }} · {{ "%.2f"|format(message[5] * 100) }}%</span>
                         </p>
-
-                        <div class="report-box">
-                            <form action="/report" method="POST">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <input type="hidden" name="message_id" value="{{ post[0] }}">
-                                <label for="reason-{{ post[0] }}">Report this post</label>
-                                <input
-                                    id="reason-{{ post[0] }}"
-                                    type="text"
-                                    name="reason"
-                                    maxlength="1000"
-                                    placeholder="Explain why this post should be reviewed"
-                                    required>
-                                <button type="submit" class="report-button">Submit report</button>
-                            </form>
-                        </div>
                     </article>
                 {% endfor %}
             {% else %}
-                <p class="empty-state">
-                    You have not submitted any messages yet. Your analysed posts will
-                    appear here.
-                </p>
+                <p class="empty-state">You have no direct messages yet.</p>
             {% endif %}
         </section>
+
+        <section class="panel">
+            <h2>Messages sent</h2>
+            {% if sent_messages %}
+                {% for message in sent_messages %}
+                    <article class="post">
+                        <p class="post-message">{{ message[3] }}</p>
+                        <p class="post-details">
+                            <span><strong>To:</strong> {{ message[1] }} ({{ message[2] }})</span>
+                            <span><strong>Sent:</strong> {{ message[6] }}</span>
+                            <span><strong>AI:</strong> {{ message[4] }} · {{ "%.2f"|format(message[5] * 100) }}%</span>
+                        </p>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">You have not sent any direct messages.</p>
+            {% endif %}
+        </section>
+
     </main>
+    <script>
+        const studentRecipient = document.getElementById("student-recipient");
+        const studentResults = document.getElementById("student-recipient-results");
+        studentRecipient.addEventListener("input", async () => {
+            if (studentRecipient.value.length < 2) return;
+            const response = await fetch("/message-recipients?q=" + encodeURIComponent(studentRecipient.value));
+            if (!response.ok) return;
+            const data = await response.json();
+            studentResults.replaceChildren(...data.recipients.map((recipient) => {
+                const option = document.createElement("option");
+                option.value = recipient.email;
+                option.label = recipient.name + " (" + recipient.role + ")";
+                return option;
+            }));
+        });
+    </script>
 </body>
 </html>

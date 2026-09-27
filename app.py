@@ -6,9 +6,15 @@ from dotenv import load_dotenv
 from flask import Flask, render_template
 from werkzeug.exceptions import HTTPException
 
-from extensions import configure_app, database_cursor
+from extensions import (
+    configure_app,
+    database_cursor,
+    ensure_discussion_schema,
+    ensure_messaging_schema,
+)
 from routes.admin import admin_bp
 from routes.auth import auth_bp
+from routes.discussion import discussion_bp
 from routes.student import student_bp
 from routes.teacher import teacher_bp
 
@@ -18,10 +24,13 @@ load_dotenv()
 def create_app():
     application = Flask(__name__)
     configure_app(application)
+    ensure_discussion_schema()
+    ensure_messaging_schema()
     application.register_blueprint(auth_bp)
     application.register_blueprint(student_bp)
     application.register_blueprint(teacher_bp)
     application.register_blueprint(admin_bp)
+    application.register_blueprint(discussion_bp)
 
     @application.route("/")
     def home():

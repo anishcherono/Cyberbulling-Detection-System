@@ -14,11 +14,6 @@ def _student_login_redirect():
     return redirect(url_for("auth.student_login"))
 
 
-def _validated_message():
-    message, error = get_message_from_request()
-    return (error, 400) if error else message
-
-
 @student_bp.route("/student-dashboard")
 def student_dashboard():
     if not session.get("student_logged_in"):
@@ -26,43 +21,54 @@ def student_dashboard():
     with database_cursor() as (_, cursor):
         cursor.execute(
             """
-            SELECT message_id, message_text, detection_result, confidence, date_sent
-            FROM Messages WHERE sender_id = %s
-            ORDER BY message_id DESC LIMIT 10
+            SELECT m.message_id, u.full_name, u.email, m.message_text,
+                   m.detection_result, m.confidence, m.date_sent
+            FROM Messages m
+            JOIN Users u ON m.sender_id = u.user_id
+            WHERE m.recipient_id = %s
+            ORDER BY m.message_id DESC
+            LIMIT 20
             """,
-            (session.get("student_user_id"),),
+            (session["student_user_id"],),
         )
-        posts = cursor.fetchall()
+        inbox_messages = cursor.fetchall()
         cursor.execute(
             """
-            SELECT a.title, a.content, u.full_name, a.date_created,
-                   a.detection_result
-            FROM Announcements a
-            JOIN Users u ON a.teacher_id = u.user_id
-            WHERE a.status = 'published'
-            ORDER BY a.announcement_id DESC
-            LIMIT 10
-            """
+            SELECT m.message_id, u.full_name, u.email, m.message_text,
+                   m.detection_result, m.confidence, m.date_sent
+            FROM Messages m
+            JOIN Users u ON m.recipient_id = u.user_id
+            WHERE m.sender_id = %s
+            ORDER BY m.message_id DESC
+            LIMIT 20
+            """,
+            (session["student_user_id"],),
         )
-        announcements = cursor.fetchall()
+        sent_messages = cursor.fetchall()
     return render_template(
         "student_dashboard.html",
         student_name=session.get("student_name"),
-        posts=posts,
-        announcements=announcements,
+        inbox_messages=inbox_messages,
+        sent_messages=sent_messages,
     )
 
 
-def _save_message(message, alert_message, alert_type_from_result=True):
+def _save_public_post(message):
     result, confidence = detect_with_ai(message)
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
             INSERT INTO Messages
-            (sender_id, message_text, detection_result, confidence, status)
-            VALUES (%s, %s, %s, %s, %s)
+            (sender_id, recipient_id, message_text, detection_result, confidence, status)
+            VALUES (%s, NULL, %s, %s, %s, %s)
             """,
-            (session["student_user_id"], message, result, confidence, "checked"),
+            (
+                session["student_user_id"],
+                message,
+                result,
+                confidence,
+                "review_required" if result.startswith("Cyberbullying") else "checked",
+            ),
         )
         message_id = cursor.lastrowid
         if result.startswith("Cyberbullying"):
@@ -73,47 +79,22 @@ def _save_message(message, alert_message, alert_type_from_result=True):
                 """,
                 (
                     message_id,
-                    result if alert_type_from_result else "Cyberbullying",
-                    alert_message,
+                    "Cyberbullying",
+                    "Cyberbullying detected in a student blog post.",
                     "unread",
                 ),
             )
-        
-    return result, confidence, message_id
 
 
 @student_bp.route("/student-post", methods=["POST"])
 def student_post():
     if not session.get("student_logged_in"):
         return _student_login_redirect()
-    message = _validated_message()
-    if isinstance(message, tuple):
-        return message
-    _save_message(
-        message,
-        "Cyberbullying detected in a student post.",
-        alert_type_from_result=False,
-    )
-    return redirect(url_for("student.student_dashboard"))
-
-
-@student_bp.route("/check", methods=["POST"])
-def check_message():
-    if not session.get("student_logged_in"):
-        return _student_login_redirect()
-    message = _validated_message()
-    if isinstance(message, tuple):
-        return message
-    result, confidence, message_id = _save_message(
-        message, "Cyberbullying detected in a message."
-    )
-    return render_template(
-        "result.html",
-        message=message,
-        result=result,
-        confidence=confidence,
-        message_id=message_id,
-    )
+    message, error = get_message_from_request()
+    if error:
+        return error, 400
+    _save_public_post(message)
+    return redirect(url_for("discussion.blog"))
 
 
 @student_bp.route("/report", methods=["POST"])

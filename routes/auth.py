@@ -18,6 +18,16 @@ def _registration_data():
     }
 
 
+def _empty_registration_data():
+    return {
+        "full_name": "",
+        "institution_id": "",
+        "email": "",
+        "password": "",
+        "confirm_password": "",
+    }
+
+
 def _login_identifier():
     return (
         request.form.get("identifier")
@@ -55,20 +65,54 @@ def _set_authenticated_session(role, user):
 
 def _register(role):
     data = _registration_data()
+    account_type = "Student" if role == "Student" else "Lecturer"
+    action = (
+        url_for("auth.student_signup")
+        if role == "Student"
+        else url_for("auth.lecturer_signup")
+    )
     required = ("full_name", "email", "password")
     if role == "Student":
         required += ("institution_id",)
     if any(not data[field] for field in required):
-        return "All registration fields are required.", 400
+        error = "All registration fields are required."
+        return render_template(
+            "signup.html",
+            account_type=account_type,
+            action=action,
+            error=error,
+            form_data=data,
+        ), 400
     if data["password"] != data["confirm_password"]:
-        return "Passwords do not match.", 400
+        error = "Passwords do not match."
+        return render_template(
+            "signup.html",
+            account_type=account_type,
+            action=action,
+            error=error,
+            form_data=data,
+        ), 400
     if len(data["password"]) < 8:
-        return "Password must be at least 8 characters.", 400
+        error = "Password must be at least 8 characters."
+        return render_template(
+            "signup.html",
+            account_type=account_type,
+            action=action,
+            error=error,
+            form_data=data,
+        ), 400
     required_domain = (
         STUDENT_EMAIL_DOMAIN if role == "Student" else LECTURER_EMAIL_DOMAIN
     )
     if not data["email"].endswith(required_domain):
-        return f"Use an institution email ending in {required_domain}.", 400
+        error = f"Use an institution email ending in {required_domain}."
+        return render_template(
+            "signup.html",
+            account_type=account_type,
+            action=action,
+            error=error,
+            form_data=data,
+        ), 400
 
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
@@ -79,7 +123,14 @@ def _register(role):
             (data["email"], data["institution_id"], data["email"]),
         )
         if cursor.fetchone() is not None:
-            return "Username, institution ID, or email is already registered.", 409
+            error = "Username, institution ID, or email is already registered."
+            return render_template(
+                "signup.html",
+                account_type=account_type,
+                action=action,
+                error=error,
+                form_data=data,
+            ), 409
         cursor.execute(
             """
             INSERT INTO Users
@@ -102,14 +153,24 @@ def _register(role):
 def student_signup():
     if request.method == "POST":
         return _register("Student")
-    return render_template("signup.html", account_type="Student", action="/student-signup")
+    return render_template(
+        "signup.html",
+        account_type="Student",
+        action=url_for("auth.student_signup"),
+        form_data=_empty_registration_data(),
+    )
 
 
 @auth_bp.route("/lecturer-signup", methods=["GET", "POST"])
 def lecturer_signup():
     if request.method == "POST":
         return _register("Teacher")
-    return render_template("signup.html", account_type="Lecturer", action="/lecturer-signup")
+    return render_template(
+        "signup.html",
+        account_type="Lecturer",
+        action=url_for("auth.lecturer_signup"),
+        form_data=_empty_registration_data(),
+    )
 
 
 @auth_bp.route("/teacher-signup")
@@ -123,10 +184,19 @@ def lecturer_login():
         identifier = _login_identifier()
         password = request.form.get("password") or ""
         teacher = _find_user(identifier, "Teacher")
-        if teacher is not None and verify_password(password, teacher[2]):
+        if teacher is not None and verify_password(password, teacher[3]):
             _set_authenticated_session("teacher", teacher)
             return redirect(url_for("teacher.teacher_dashboard"))
-        return "Invalid lecturer username or password.", 401
+        return render_template(
+            "login.html",
+            login_title="Lecturer login",
+            login_action=url_for("auth.lecturer_login"),
+            login_description="Lecturer area",
+            login_identifier_label="Institution email",
+            signup_action=url_for("auth.lecturer_signup"),
+            error="Invalid lecturer email or password.",
+            identifier=request.form.get("identifier", ""),
+        ), 401
     return render_template(
         "login.html",
         login_title="Lecturer login",
@@ -151,10 +221,15 @@ def admin_login():
         if user is not None and verify_password(password, user[3]):
             _set_authenticated_session("admin", user)
             return redirect(url_for("admin.admin_dashboard"))
-        return """
-        <h2>Invalid username or password</h2>
-        <a href="/admin/login">Try Again</a>
-        """
+        return render_template(
+            "login.html",
+            login_title="Administrator login",
+            login_action=url_for("auth.admin_login"),
+            login_identifier_label="Administrator email",
+            login_description="Administrator area",
+            error="Invalid administrator email or password.",
+            identifier=request.form.get("identifier", ""),
+        ), 401
     return render_template(
         "login.html",
         login_title="Administrator login",
@@ -177,10 +252,11 @@ def student_login():
         if student is not None and verify_password(password, student[3]):
             _set_authenticated_session("student", student)
             return redirect(url_for("student.student_dashboard"))
-        return """
-        <h2>Invalid student username or password</h2>
-        <a href="/student-login">Try Again</a>
-        """
+        return render_template(
+            "student_login.html",
+            error="Invalid student email or password.",
+            identifier=request.form.get("identifier", ""),
+        ), 401
     return render_template("student_login.html")
 
 

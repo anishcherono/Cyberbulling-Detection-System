@@ -91,6 +91,69 @@ def database_cursor(commit=False):
         close_database(connection, cursor)
 
 
+def ensure_discussion_schema():
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS DiscussionReplies (
+                reply_id INT AUTO_INCREMENT PRIMARY KEY,
+                message_id INT NULL,
+                announcement_id INT NULL,
+                author_id INT NOT NULL,
+                reply_text TEXT NOT NULL,
+                detection_result VARCHAR(100) NOT NULL,
+                confidence DECIMAL(6, 5) NOT NULL DEFAULT 0,
+                status VARCHAR(30) NOT NULL DEFAULT 'checked',
+                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT fk_reply_message
+                    FOREIGN KEY (message_id) REFERENCES Messages(message_id)
+                    ON DELETE CASCADE,
+                CONSTRAINT fk_reply_announcement
+                    FOREIGN KEY (announcement_id)
+                    REFERENCES Announcements(announcement_id)
+                    ON DELETE CASCADE,
+                CONSTRAINT fk_reply_author
+                    FOREIGN KEY (author_id) REFERENCES Users(user_id)
+                    ON DELETE CASCADE
+            )
+            """
+        )
+
+
+def ensure_messaging_schema():
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'Messages'
+              AND COLUMN_NAME = 'recipient_id'
+            """
+        )
+        if cursor.fetchone()[0] == 0:
+            cursor.execute(
+                "ALTER TABLE Messages ADD COLUMN recipient_id INT NULL AFTER sender_id"
+            )
+        cursor.execute(
+            """
+            SELECT COUNT(*) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'Messages'
+              AND COLUMN_NAME = 'recipient_id'
+              AND REFERENCED_TABLE_NAME = 'Users'
+            """
+        )
+        if cursor.fetchone()[0] == 0:
+            cursor.execute(
+                """
+                ALTER TABLE Messages
+                ADD CONSTRAINT fk_message_recipient
+                FOREIGN KEY (recipient_id) REFERENCES Users(user_id)
+                ON DELETE SET NULL
+                """
+            )
+
+
 def verify_password(password, stored_password):
     if not isinstance(password, str) or not isinstance(stored_password, str):
         return False

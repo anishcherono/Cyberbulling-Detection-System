@@ -9,6 +9,7 @@
     </header>
     <section class="auth-panel">
         <h2>Create {{ account_type.lower() }} account</h2>
+        {% if error %}<p class="auth-error" role="alert">{{ error }}</p>{% endif %}
         <p class="auth-help">
             Use your official
             {% if account_type == "Student" %}student email ending in @students.nish.edu.
@@ -17,13 +18,13 @@
         <form method="POST" action="{{ action }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="full_name">Full name</label>
-            <input id="full_name" name="full_name" autocomplete="name" required>
+            <input id="full_name" name="full_name" autocomplete="name" value="{{ form_data.full_name|default('') }}" required>
             {% if account_type == "Student" %}
             <label for="institution_id">Student ID</label>
-            <input id="institution_id" name="institution_id" required>
+            <input id="institution_id" name="institution_id" value="{{ form_data.institution_id|default('') }}" required>
             {% endif %}
             <label for="email">Institution email</label>
-            <input id="email" type="email" name="email" autocomplete="email" required>
+            <input id="email" type="email" name="email" autocomplete="email" value="{{ form_data.email|default('') }}" required>
             <label for="password">Password</label>
             <input id="password" type="password" name="password" autocomplete="new-password" minlength="8" required>
             <label for="confirm_password">Confirm password</label>

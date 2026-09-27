@@ -35,7 +35,7 @@
             <div class="message">{{ message }}</div>
             <div class="summary">
                 <div><strong>Detection</strong>{{ result }}</div>
-                <div><strong>AI confidence</strong>{{ "%.2f"|format(confidence) }}</div>
+                <div><strong>AI confidence</strong>{{ "%.2f"|format(confidence * 100) }}%</div>
             </div>
         </section>
         <section class="panel">
