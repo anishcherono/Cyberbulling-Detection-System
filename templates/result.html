@@ -1,146 +1,55 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Detection Result - Cyberbullying Detection System</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Detection Result - Nish Institution</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
-            text-align: center;
-            padding-top: 50px;
-        }
-
-        .container {
-            width: 600px;
-            margin: auto;
-            background-color: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px #ccc;
-        }
-
-        h1 {
-            color: #333;
-        }
-
-        .message-box {
-            background-color: #f9f9f9;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-            text-align: left;
-        }
-
-        .result {
-            font-size: 22px;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-
-        .confidence {
-            font-size: 18px;
-            margin-bottom: 20px;
-        }
-
-        textarea {
-            width: 90%;
-            height: 100px;
-            padding: 10px;
-            font-size: 15px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-
-        button {
-            margin-top: 15px;
-            padding: 12px 25px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: #333;
-            color: white;
-        }
-
-        button:hover {
-            background-color: #555;
-        }
-
-        .home-link {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 15px;
-            background-color: #555;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-        }
-
-        .home-link:hover {
-            background-color: #777;
-        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; color: #222; background: #f5f5f5; }
+        .page { width: min(720px, 92%); margin: 35px auto; }
+        .header { margin-bottom: 20px; }
+        .header h1 { margin: 0; font-size: 25px; font-weight: normal; }
+        .header p { margin: 5px 0; color: #555; }
+        .panel { padding: 22px; margin-bottom: 18px; background: #fff; border: 1px solid #d6d6d6; }
+        .message { padding: 15px; white-space: pre-wrap; overflow-wrap: anywhere; background: #f5f5f5; border: 1px solid #ddd; }
+        .summary { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+        .summary div { padding: 14px; border: 1px solid #ddd; }
+        .summary strong { display: block; margin-bottom: 5px; }
+        label { display: block; margin: 12px 0 6px; font-weight: bold; }
+        textarea { width: 100%; min-height: 100px; padding: 10px; font: inherit; border: 1px solid #aaa; border-radius: 3px; resize: vertical; }
+        button, .link { display: inline-block; margin-top: 12px; padding: 9px 15px; font: inherit; color: #fff; background: #174A7C; border: 0; border-radius: 3px; text-decoration: none; cursor: pointer; }
+        button:hover, .link:hover { background: #2F6F9F; }
+        .actions { margin-top: 18px; }
+        @media (max-width: 560px) { .summary { grid-template-columns: 1fr; } }
     </style>
 </head>
-
 <body>
-
-    <div class="container">
-
-        <h1>Message Detection Result</h1>
-
-        <div class="message-box">
-
-            <strong>Message:</strong>
-
-            <p>{{ message }}</p>
-
-        </div>
-
-        <div class="result">
-
-            AI Detection Result:
-            {{ result }}
-
-        </div>
-
-        <div class="confidence">
-
-            AI Confidence:
-            {{ "%.2f"|format(confidence) }}
-
-        </div>
-
-        <hr>
-
-        <h2>Report this message</h2>
-
-        <form action="/report" method="POST">
-
-            <input
-                type="hidden"
-                name="message_id"
-                value="{{ message_id }}"
-            >
-
-            <textarea
-                name="reason"
-                placeholder="Enter the reason for reporting this message..."
-                required></textarea>
-
-            <br>
-
-            <button type="submit">
-                Report Message
-            </button>
-
-        </form>
-
-        <a href="/" class="home-link">
-            Check Another Message
-        </a>
-
-    </div>
-
+    <main class="page">
+        <header class="header">
+            <h1>Message detection result</h1>
+            <p>Nish Institution · Student Portal</p>
+        </header>
+        <section class="panel">
+            <h2>Submitted message</h2>
+            <div class="message">{{ message }}</div>
+            <div class="summary">
+                <div><strong>Detection</strong>{{ result }}</div>
+                <div><strong>AI confidence</strong>{{ "%.2f"|format(confidence) }}</div>
+            </div>
+        </section>
+        <section class="panel">
+            <h2>Report this message</h2>
+            <p>If you believe the result is incorrect or the message needs review, explain why below.</p>
+            <form action="/report" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="message_id" value="{{ message_id }}">
+                <label for="reason">Reason</label>
+                <textarea id="reason" name="reason" maxlength="1000" required></textarea>
+                <button type="submit">Submit report</button>
+            </form>
+        </section>
+        <p class="actions"><a class="link" href="/student-dashboard">Back to student portal</a></p>
+    </main>
 </body>
 </html>

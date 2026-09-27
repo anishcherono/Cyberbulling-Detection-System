@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lecturer Workspace - Nish Institution</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; color: #222; background: #f5f5f5; }
+        header { color: #fff; background: #174A7C; }
+        .header-content, main { width: min(940px, 92%); margin: 0 auto; }
+        .header-content { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+        .title { margin: 0; font-size: 22px; font-weight: normal; }
+        nav { display: flex; gap: 8px; }
+        nav a { padding: 7px 12px; color: #fff; text-decoration: none; border: 1px solid #b9d0e1; border-radius: 3px; }
+        nav a:hover { background: #0F355A; }
+        main { padding: 28px 0 45px; }
+        .panel { padding: 22px; margin-bottom: 20px; background: #fff; border: 1px solid #d6d6d6; }
+        h1, h2 { margin-top: 0; }
+        h2 { color: #174A7C; }
+        .help { color: #555; font-size: 14px; }
+        label { display: block; margin: 12px 0 6px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; font: inherit; border: 1px solid #aaa; border-radius: 3px; }
+        textarea { min-height: 130px; resize: vertical; }
+        button { margin-top: 12px; padding: 9px 15px; color: #fff; background: #174A7C; border: 0; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #2F6F9F; }
+        .announcement { padding: 16px 0; border-bottom: 1px solid #ddd; }
+        .announcement:last-child { border-bottom: 0; }
+        .announcement h3 { margin: 0 0 5px; color: #174A7C; }
+        .meta { color: #555; font-size: 13px; }
+        .empty { color: #555; }
+        @media (max-width: 600px) {
+            .header-content { display: block; }
+            nav { margin-top: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <p class="title">Nish Institution · Lecturer Workspace</p>
+            <nav aria-label="Lecturer navigation">
+                <a href="/lecturer-dashboard">Workspace</a>
+                <a href="/lecturer-logout">Log out</a>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="panel">
+            <h1>Welcome, {{ teacher_name }}</h1>
+            <p class="help">Create announcements and share educational information with students.</p>
+        </section>
+        <section class="panel">
+            <h2>Publish an announcement</h2>
+            <form action="/lecturer-announcement" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="title">Title</label>
+                <input id="title" name="title" maxlength="150" required>
+                <label for="content">Announcement</label>
+                <textarea id="content" name="message" maxlength="2000" required></textarea>
+                <button type="submit">Publish announcement</button>
+            </form>
+            <p class="help">Announcements are checked automatically before publication.</p>
+        </section>
+        <section class="panel">
+            <h2>My recent announcements</h2>
+            {% if announcements %}
+                {% for announcement in announcements %}
+                    <article class="announcement">
+                        <h3>{{ announcement[1] }}</h3>
+                        <p>{{ announcement[2] }}</p>
+                        <p class="meta">{{ announcement[6] }} · Created {{ announcement[5] }} · Detection: {{ announcement[3] }} · Confidence: {{ "%.2f"|format(announcement[4]) }}</p>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty">You have not published any announcements yet.</p>
+            {% endif %}
+        </section>
+    </main>
+</body>
+</html>

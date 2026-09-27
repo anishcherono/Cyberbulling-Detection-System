@@ -14,7 +14,7 @@
         }
 
         .header {
-            background-color: #333;
+            background-color: #174A7C;
             color: white;
             padding: 20px;
             text-align: center;
@@ -49,7 +49,7 @@
             background-color: white;
             padding: 20px;
             margin-bottom: 25px;
-            border-radius: 8px;
+            border: 1px solid #d6d6d6;
         }
 
         /* GENERAL STATISTICS */
@@ -65,8 +65,7 @@
             background-color: white;
             padding: 25px;
             text-align: center;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #d6d6d6;
         }
 
         .card h2 {
@@ -97,8 +96,7 @@
             background-color: white;
             padding: 25px;
             text-align: center;
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #d6d6d6;
         }
 
         .analytics-card h2 {
@@ -111,13 +109,29 @@
             margin-bottom: 0;
         }
 
+        .analytics-note {
+            color: #555;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .chart-panel {
+            min-height: 300px;
+        }
+
         /* SECTIONS */
 
         .section {
             background-color: white;
             padding: 20px;
             margin-bottom: 25px;
-            border-radius: 8px;
+            border: 1px solid #d6d6d6;
             overflow-x: auto;
         }
 
@@ -130,7 +144,7 @@
         }
 
         th {
-            background-color: #333;
+            background-color: #174A7C;
             color: white;
             padding: 12px;
             text-align: left;
@@ -151,7 +165,7 @@
         /* BUTTON */
 
         .read-button {
-            background-color: #555;
+            background-color: #2F6F9F;
             color: white;
             border: none;
             padding: 8px 12px;
@@ -160,7 +174,7 @@
         }
 
         .read-button:hover {
-            background-color: #333;
+            background-color: #174A7C;
         }
 
         .status {
@@ -183,6 +197,10 @@
             }
 
             .analytics-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -219,7 +237,7 @@
 
     <div class="nav">
 
-        <a href="/dashboard">Dashboard</a>
+        <a href="/admin">Dashboard</a>
 
         <a href="/reports">Reports</a>
 
@@ -256,6 +274,28 @@
 
                 <p>Total Users</p>
 
+            </div>
+
+            <div class="section">
+                <h2>Registered Students</h2>
+                {% if students %}
+                <table>
+                    <tr>
+                        <th>Student name</th>
+                        <th>Student ID</th>
+                        <th>Institution email</th>
+                    </tr>
+                    {% for student in students %}
+                    <tr>
+                        <td>{{ student[0] }}</td>
+                        <td>{{ student[1] or "Not provided" }}</td>
+                        <td>{{ student[2] or "Not provided" }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>No student accounts have been registered yet.</p>
+                {% endif %}
             </div>
 
 
@@ -295,6 +335,11 @@
             AI Detection Analytics
         </h2>
 
+        <p class="analytics-note">
+            Every submitted post is automatically analysed and retained for
+            monitoring, research, and system improvement.
+        </p>
+
 
         <div class="analytics-cards">
 
@@ -309,6 +354,16 @@
                     Cyberbullying Messages
                 </p>
 
+            </div>
+
+            <div class="analytics-card">
+                <h2>{{ total_reports }}</h2>
+                <p>Student Reports</p>
+            </div>
+
+            <div class="analytics-card">
+                <h2>{{ "%.2f"|format(average_confidence * 100) }}%</h2>
+                <p>Average AI Confidence</p>
             </div>
 
 
@@ -356,18 +411,17 @@
         <!-- AI ANALYTICS CHART -->
 
         <div class="section">
-
-            <h2>
-                Cyberbullying Detection Overview
-            </h2>
-
-
-            <div class="chart-container">
-
-                <canvas id="detectionChart"></canvas>
-
+            <h2>Research and Monitoring Trends</h2>
+            <div class="chart-grid">
+                <div class="chart-container chart-panel">
+                    <h3>Detection Results</h3>
+                    <canvas id="detectionChart"></canvas>
+                </div>
+                <div class="chart-container chart-panel">
+                    <h3>Posts Analysed Over Time</h3>
+                    <canvas id="activityChart"></canvas>
+                </div>
             </div>
-
         </div>
 
 
@@ -377,6 +431,8 @@
             id="analyticsData"
             data-cyberbullying="{{ cyberbullying_messages }}"
             data-normal="{{ normal_messages }}"
+            data-dates='{{ daily_activity|map(attribute=0)|list|tojson }}'
+            data-daily-counts='{{ daily_activity|map(attribute=1)|list|tojson }}'
         ></div>
 
 
@@ -420,10 +476,8 @@
 
                         label: "Number of Messages",
 
-                        data: [
-                            cyberbullying,
-                            normal
-                        ]
+                        data: [cyberbullying, normal],
+                        backgroundColor: ["#2F6F9F", "#A8C4D8"]
 
                     }]
 
@@ -451,6 +505,29 @@
 
                 }
 
+            });
+
+            const dailyDates = JSON.parse(analyticsData.dataset.dates);
+            const dailyCounts = JSON.parse(analyticsData.dataset.dailyCounts);
+            const activityCtx = document.getElementById("activityChart");
+
+            new Chart(activityCtx, {
+                type: "line",
+                data: {
+                    labels: dailyDates,
+                    datasets: [{
+                        label: "Posts analysed",
+                        data: dailyCounts,
+                        borderColor: "#2F6F9F",
+                        backgroundColor: "rgba(47, 111, 159, 0.12)",
+                        fill: true,
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
             });
 
         </script>
@@ -630,6 +707,7 @@
                             action="/mark-alert-read/{{ alert[0] }}"
                             method="POST"
                         >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
                             <button
                                 type="submit"

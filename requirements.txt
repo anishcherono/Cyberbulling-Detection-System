@@ -1,0 +1,6 @@
+Flask>=3.0,<4
+mysql-connector-python>=8.0,<10
+transformers>=4.40,<5
+torch>=2.0
+
+python-dotenv>=1.0,<2

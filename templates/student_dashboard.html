@@ -1,267 +1,318 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Student Portal - Nish Institution</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
+
         body {
+            margin: 0;
             font-family: Arial, sans-serif;
-            background-color: #f2f2f2;
-            margin: 0;
+            line-height: 1.5;
+            color: #222;
+            background: #f5f5f5;
         }
 
-        .header {
-            background-color: #333;
-            color: white;
-            padding: 20px;
+        .site-header {
+            background: #174A7C;
+            color: #fff;
         }
 
-        .header h1 {
+        .header-content,
+        main {
+            width: min(940px, 92%);
+            margin: 0 auto;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 0;
+        }
+
+        .site-title {
             margin: 0;
-            text-align: center;
+            font-size: 22px;
+            font-weight: normal;
         }
 
         .nav {
-            text-align: center;
-            margin-top: 15px;
+            display: flex;
+            gap: 8px;
         }
 
         .nav a {
-            color: white;
+            padding: 7px 12px;
+            color: #fff;
             text-decoration: none;
-            margin: 0 8px;
-            padding: 8px 15px;
-            background-color: #555;
-            border-radius: 5px;
+            border: 1px solid #888;
+            border-radius: 3px;
         }
 
         .nav a:hover {
-            background-color: #777;
+            background: #0F355A;
         }
 
-        .container {
-            width: 80%;
-            margin: 30px auto;
+        main {
+            padding: 28px 0 45px;
         }
 
-        .welcome {
-            background-color: white;
-            padding: 25px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            box-shadow: 0 0 8px #ccc;
+        .intro,
+        .panel,
+        .post {
+            background: #fff;
+            border: 1px solid #d6d6d6;
         }
 
-        .post-box {
-            background-color: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 0 8px #ccc;
-            margin-bottom: 25px;
+        .intro,
+        .panel {
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        .intro h1 {
+            margin-bottom: 8px;
+            font-size: 25px;
+        }
+
+        .intro p {
+            max-width: 700px;
+            margin: 6px 0;
+        }
+
+        .help-text {
+            color: #555;
+            font-size: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: bold;
+        }
+
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            padding: 11px;
+            font: inherit;
+            border: 1px solid #aaa;
+            border-radius: 3px;
         }
 
         textarea {
-            width: 95%;
-            height: 120px;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 15px;
+            min-height: 130px;
             resize: vertical;
         }
 
         button {
-            margin-top: 15px;
-            padding: 11px 22px;
-            border: none;
-            border-radius: 5px;
-            background-color: #333;
-            color: white;
+            margin-top: 12px;
+            padding: 9px 16px;
+            font: inherit;
+            color: #fff;
+            background: #174A7C;
+            border: 0;
+            border-radius: 3px;
             cursor: pointer;
         }
 
         button:hover {
-            background-color: #555;
+            background: #2F6F9F;
         }
 
-        .posts {
-            background-color: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 0 8px #ccc;
+        .posts-header {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 4px;
         }
 
         .post {
-            border-bottom: 1px solid #ddd;
-            padding: 15px 0;
+            padding: 18px 0;
+            border-width: 0 0 1px;
         }
 
         .post:last-child {
-            border-bottom: none;
+            border-bottom: 0;
+            padding-bottom: 0;
         }
 
-        .result {
-            font-weight: bold;
+        .post-message {
+            margin: 0 0 12px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
         }
 
-        .date {
-            color: #777;
-            font-size: 13px;
+        .post-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .post-details strong {
+            color: #222;
         }
 
         .report-box {
-            margin-top: 15px;
-            padding-top: 10px;
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid #eee;
         }
 
-        .report-reason {
-            width: 90%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
+        .report-box label {
             font-size: 14px;
         }
 
         .report-button {
-            background-color: #b00020;
+            background: #2F6F9F;
         }
 
-        .report-button:hover {
-            background-color: #800018;
+        .empty-state {
+            margin: 0;
+            color: #555;
+        }
+
+        @media (max-width: 600px) {
+            .header-content {
+                display: block;
+            }
+
+            .nav {
+                margin-top: 12px;
+            }
+
+            .nav a {
+                display: inline-block;
+            }
+
+            main {
+                width: 94%;
+                padding-top: 18px;
+            }
+
+            .intro,
+            .panel {
+                padding: 17px;
+            }
+
+            .posts-header {
+                display: block;
+            }
         }
     </style>
 </head>
 
 <body>
-
-    <div class="header">
-
-        <h1>Nish Institution</h1>
-
-        <div class="nav">
-            <a href="/student-dashboard">Student Portal</a>
-            <a href="/student-logout">Logout</a>
+    <header class="site-header">
+        <div class="header-content">
+            <p class="site-title">Nish Institution · Student Portal</p>
+            <nav class="nav" aria-label="Student navigation">
+                <a href="/student-dashboard">My Portal</a>
+                <a href="/student-logout">Log out</a>
+            </nav>
         </div>
+    </header>
 
-    </div>
-
-
-    <div class="container">
-
-        <div class="welcome">
-
-            <h2>Welcome, {{ student_name }}</h2>
-
-            <p>
-                You are logged in to the Nish Institution student portal.
+    <main>
+        <section class="intro">
+            <h1>Welcome, {{ student_name }}</h1>
+            <p>Use this portal to submit a message and review your recent posts.</p>
+            <p class="help-text">
+                Submitted messages are automatically analysed by the cyberbullying
+                detection system.
             </p>
+        </section>
 
-            <p>
-                Posts submitted through this portal are automatically
-                analysed by the cyberbullying detection system.
-            </p>
+        <section class="panel" aria-labelledby="announcements-heading">
+            <h2 id="announcements-heading">Lecturer announcements</h2>
+            {% if announcements %}
+                {% for announcement in announcements %}
+                    <article class="post">
+                        <h3>{{ announcement[0] }}</h3>
+                        <p class="post-message">{{ announcement[1] }}</p>
+                        <p class="post-details">
+                            <span><strong>From:</strong> {{ announcement[2] }}</span>
+                            <span><strong>Published:</strong> {{ announcement[3] }}</span>
+                        </p>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">There are no teacher announcements yet.</p>
+            {% endif %}
+        </section>
 
-        </div>
-
-
-        <div class="post-box">
-
-            <h2>Create a Post</h2>
-
+        <section class="panel" aria-labelledby="create-post-heading">
+            <h2 id="create-post-heading">Create a post</h2>
             <form action="/student-post" method="POST">
-
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="message">Message</label>
                 <textarea
+                    id="message"
                     name="message"
                     placeholder="Write your message here..."
+                    maxlength="2000"
                     required></textarea>
-
-                <br>
-
-                <button type="submit">
-                    Post Message
-                </button>
-
+                <button type="submit">Submit for analysis</button>
             </form>
+        </section>
 
-        </div>
-
-
-        <div class="posts">
-
-            <h2>My Recent Posts</h2>
+        <section class="panel" aria-labelledby="recent-posts-heading">
+            <div class="posts-header">
+                <h2 id="recent-posts-heading">My recent posts</h2>
+                <span class="help-text">Showing your latest 10 posts</span>
+            </div>
 
             {% if posts %}
-
                 {% for post in posts %}
-
-                    <div class="post">
-
-                        <p>
-                            <strong>Message:</strong>
-                            {{ post[1] }}
+                    <article class="post">
+                        <p class="post-message">{{ post[1] }}</p>
+                        <p class="post-details">
+                            <span><strong>Detection:</strong> {{ post[2] }}</span>
+                            <span><strong>Confidence:</strong> {{ "%.2f"|format(post[3]) }}</span>
+                            <span><strong>Posted:</strong> {{ post[4] }}</span>
                         </p>
-
-                        <p class="result">
-                            Detection:
-                            {{ post[2] }}
-                        </p>
-
-                        <p>
-                            Confidence:
-                            {{ "%.2f"|format(post[3]) }}
-                        </p>
-
-                        <p class="date">
-                            Posted: {{ post[4] }}
-                        </p>
-
-
-                        <!-- REPORT MESSAGE -->
 
                         <div class="report-box">
-
                             <form action="/report" method="POST">
-
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <input type="hidden" name="message_id" value="{{ post[0] }}">
+                                <label for="reason-{{ post[0] }}">Report this post</label>
                                 <input
-                                    type="hidden"
-                                    name="message_id"
-                                    value="{{ post[0] }}"
-                                >
-
-                                <input
+                                    id="reason-{{ post[0] }}"
                                     type="text"
                                     name="reason"
-                                    class="report-reason"
-                                    placeholder="Reason for reporting"
-                                    required
-                                >
-
-                                <br>
-
-                                <button
-                                    type="submit"
-                                    class="report-button"
-                                >
-                                    Report Message
-                                </button>
-
+                                    maxlength="1000"
+                                    placeholder="Explain why this post should be reviewed"
+                                    required>
+                                <button type="submit" class="report-button">Submit report</button>
                             </form>
-
                         </div>
-
-                    </div>
-
+                    </article>
                 {% endfor %}
-
             {% else %}
-
-                <p>You have not posted any messages yet.</p>
-
+                <p class="empty-state">
+                    You have not submitted any messages yet. Your analysed posts will
+                    appear here.
+                </p>
             {% endif %}
-
-        </div>
-
-    </div>
-
+        </section>
+    </main>
 </body>
 </html>

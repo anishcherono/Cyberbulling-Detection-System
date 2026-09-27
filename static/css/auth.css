@@ -1,0 +1,40 @@
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: #222;
+    background: #f5f5f5;
+}
+.auth-page { width: min(440px, 92%); margin: 50px auto; }
+.auth-brand { margin-bottom: 18px; text-align: center; }
+.auth-brand h1 { margin: 0; font-size: 24px; font-weight: normal; }
+.auth-brand p { margin: 5px 0; color: #555; }
+.auth-panel { padding: 26px; background: #fff; border: 1px solid #d6d6d6; }
+.auth-panel h2 { margin-top: 0; font-size: 21px; }
+.auth-panel label { display: block; margin: 15px 0 6px; font-weight: bold; }
+.auth-panel input {
+    width: 100%;
+    padding: 11px;
+    font: inherit;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+}
+.auth-panel button {
+    width: 100%;
+    margin-top: 20px;
+    padding: 10px;
+    font: inherit;
+    color: #fff;
+    background: #174A7C;
+    border: 0;
+    border-radius: 3px;
+    cursor: pointer;
+}
+.auth-panel button:hover { background: #2F6F9F; }
+.auth-help { color: #555; font-size: 14px; }
+.auth-link { margin: 20px 0 0; text-align: center; }
+.auth-panel a { color: #174A7C; }
+@media (max-width: 480px) {
+    .auth-page { width: min(420px, 94%); margin: 28px auto; }
+    .auth-panel { padding: 20px 16px; }
+}

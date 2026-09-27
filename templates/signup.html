@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ account_type }} Signup - Nish Institution{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+{% block body %}
+<main class="auth-page">
+    <header class="auth-brand">
+        <h1>Nish Institution</h1>
+        <p>Cyberbullying Detection and Prevention System</p>
+    </header>
+    <section class="auth-panel">
+        <h2>Create {{ account_type.lower() }} account</h2>
+        <p class="auth-help">
+            Use your official
+            {% if account_type == "Student" %}student email ending in @students.nish.edu.
+            {% else %}lecturer email ending in @lecturers.nish.edu.{% endif %}
+        </p>
+        <form method="POST" action="{{ action }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="full_name">Full name</label>
+            <input id="full_name" name="full_name" autocomplete="name" required>
+            {% if account_type == "Student" %}
+            <label for="institution_id">Student ID</label>
+            <input id="institution_id" name="institution_id" required>
+            {% endif %}
+            <label for="email">Institution email</label>
+            <input id="email" type="email" name="email" autocomplete="email" required>
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password" autocomplete="new-password" minlength="8" required>
+            <label for="confirm_password">Confirm password</label>
+            <input id="confirm_password" type="password" name="confirm_password" autocomplete="new-password" minlength="8" required>
+            <button type="submit">Create account</button>
+        </form>
+        <p class="auth-link"><a href="/">Back to home</a></p>
+    </section>
+</main>
+{% endblock %}
