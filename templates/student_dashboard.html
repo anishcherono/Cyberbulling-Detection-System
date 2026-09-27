@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Portal - Nish Institution</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            margin: 0;
+        }
+
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 20px;
+        }
+
+        .header h1 {
+            margin: 0;
+            text-align: center;
+        }
+
+        .nav {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 8px;
+            padding: 8px 15px;
+            background-color: #555;
+            border-radius: 5px;
+        }
+
+        .nav a:hover {
+            background-color: #777;
+        }
+
+        .container {
+            width: 80%;
+            margin: 30px auto;
+        }
+
+        .welcome {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 0 8px #ccc;
+        }
+
+        .post-box {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 8px #ccc;
+            margin-bottom: 25px;
+        }
+
+        textarea {
+            width: 95%;
+            height: 120px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 15px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 11px 22px;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .posts {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 0 8px #ccc;
+        }
+
+        .post {
+            border-bottom: 1px solid #ddd;
+            padding: 15px 0;
+        }
+
+        .post:last-child {
+            border-bottom: none;
+        }
+
+        .result {
+            font-weight: bold;
+        }
+
+        .date {
+            color: #777;
+            font-size: 13px;
+        }
+
+        .report-box {
+            margin-top: 15px;
+            padding-top: 10px;
+        }
+
+        .report-reason {
+            width: 90%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .report-button {
+            background-color: #b00020;
+        }
+
+        .report-button:hover {
+            background-color: #800018;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="header">
+
+        <h1>Nish Institution</h1>
+
+        <div class="nav">
+            <a href="/student-dashboard">Student Portal</a>
+            <a href="/student-logout">Logout</a>
+        </div>
+
+    </div>
+
+
+    <div class="container">
+
+        <div class="welcome">
+
+            <h2>Welcome, {{ student_name }}</h2>
+
+            <p>
+                You are logged in to the Nish Institution student portal.
+            </p>
+
+            <p>
+                Posts submitted through this portal are automatically
+                analysed by the cyberbullying detection system.
+            </p>
+
+        </div>
+
+
+        <div class="post-box">
+
+            <h2>Create a Post</h2>
+
+            <form action="/student-post" method="POST">
+
+                <textarea
+                    name="message"
+                    placeholder="Write your message here..."
+                    required></textarea>
+
+                <br>
+
+                <button type="submit">
+                    Post Message
+                </button>
+
+            </form>
+
+        </div>
+
+
+        <div class="posts">
+
+            <h2>My Recent Posts</h2>
+
+            {% if posts %}
+
+                {% for post in posts %}
+
+                    <div class="post">
+
+                        <p>
+                            <strong>Message:</strong>
+                            {{ post[1] }}
+                        </p>
+
+                        <p class="result">
+                            Detection:
+                            {{ post[2] }}
+                        </p>
+
+                        <p>
+                            Confidence:
+                            {{ "%.2f"|format(post[3]) }}
+                        </p>
+
+                        <p class="date">
+                            Posted: {{ post[4] }}
+                        </p>
+
+
+                        <!-- REPORT MESSAGE -->
+
+                        <div class="report-box">
+
+                            <form action="/report" method="POST">
+
+                                <input
+                                    type="hidden"
+                                    name="message_id"
+                                    value="{{ post[0] }}"
+                                >
+
+                                <input
+                                    type="text"
+                                    name="reason"
+                                    class="report-reason"
+                                    placeholder="Reason for reporting"
+                                    required
+                                >
+
+                                <br>
+
+                                <button
+                                    type="submit"
+                                    class="report-button"
+                                >
+                                    Report Message
+                                </button>
+
+                            </form>
+
+                        </div>
+
+                    </div>
+
+                {% endfor %}
+
+            {% else %}
+
+                <p>You have not posted any messages yet.</p>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detection Result - Cyberbullying Detection System</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f2f2;
+            text-align: center;
+            padding-top: 50px;
+        }
+
+        .container {
+            width: 600px;
+            margin: auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #ccc;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .message-box {
+            background-color: #f9f9f9;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .result {
+            font-size: 22px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .confidence {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        textarea {
+            width: 90%;
+            height: 100px;
+            padding: 10px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #333;
+            color: white;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+
+        .home-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #555;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .home-link:hover {
+            background-color: #777;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Message Detection Result</h1>
+
+        <div class="message-box">
+
+            <strong>Message:</strong>
+
+            <p>{{ message }}</p>
+
+        </div>
+
+        <div class="result">
+
+            AI Detection Result:
+            {{ result }}
+
+        </div>
+
+        <div class="confidence">
+
+            AI Confidence:
+            {{ "%.2f"|format(confidence) }}
+
+        </div>
+
+        <hr>
+
+        <h2>Report this message</h2>
+
+        <form action="/report" method="POST">
+
+            <input
+                type="hidden"
+                name="message_id"
+                value="{{ message_id }}"
+            >
+
+            <textarea
+                name="reason"
+                placeholder="Enter the reason for reporting this message..."
+                required></textarea>
+
+            <br>
+
+            <button type="submit">
+                Report Message
+            </button>
+
+        </form>
+
+        <a href="/" class="home-link">
+            Check Another Message
+        </a>
+
+    </div>
+
+</body>
+</html>

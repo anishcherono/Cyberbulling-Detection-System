@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Nish Institution</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 32px;
+        }
+
+        .header p {
+            margin-top: 10px;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .welcome {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        /* ANALYTICS CARDS */
+
+        .analytics {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 35px;
+        }
+
+        .card {
+            background-color: white;
+            width: 200px;
+            padding: 25px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .card .number {
+            font-size: 30px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .card p {
+            color: #666;
+            margin-bottom: 0;
+        }
+
+        /* PORTALS */
+
+        .portals {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            flex-wrap: wrap;
+        }
+
+        .portal {
+            background-color: white;
+            width: 300px;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .portal h2 {
+            margin-top: 0;
+        }
+
+        .portal a {
+            display: inline-block;
+            background-color: #333;
+            color: white;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+
+        .portal a:hover {
+            background-color: #555;
+        }
+
+        .footer {
+            text-align: center;
+            color: #666;
+            margin-top: 40px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <div class="header">
+
+        <h1>Nish Institution</h1>
+
+        <p>Cyberbullying Detection and Prevention System</p>
+
+    </div>
+
+
+    <div class="container">
+
+
+        <div class="welcome">
+
+            <h2>Welcome to Nish Institution</h2>
+
+            <p>
+                This portal provides access to the student
+                and administrator areas of the institution.
+            </p>
+
+        </div>
+
+
+        <!-- ANALYTICS SECTION -->
+
+        <h2>System Analytics</h2>
+
+        <div class="analytics">
+
+
+            <!-- TOTAL MESSAGES -->
+
+            <div class="card">
+
+                <h3>Total Messages</h3>
+
+                <div class="number">
+                    {{ total_messages }}
+                </div>
+
+                <p>Messages analysed</p>
+
+            </div>
+
+
+            <!-- CYBERBULLYING -->
+
+            <div class="card">
+
+                <h3>Cyberbullying Detected</h3>
+
+                <div class="number">
+                    {{ cyberbullying_count }}
+                </div>
+
+                <p>Detected messages</p>
+
+            </div>
+
+
+            <!-- NOT CYBERBULLYING -->
+
+            <div class="card">
+
+                <h3>Not Cyberbullying</h3>
+
+                <div class="number">
+                    {{ not_cyberbullying_count }}
+                </div>
+
+                <p>Safe messages</p>
+
+            </div>
+
+
+            <!-- DETECTION RATE -->
+
+            <div class="card">
+
+                <h3>Detection Rate</h3>
+
+                <div class="number">
+                    {{ detection_rate }}%
+                </div>
+
+                <p>Cyberbullying detection</p>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- PORTALS -->
+
+        <div class="portals">
+
+
+            <!-- STUDENT PORTAL -->
+
+            <div class="portal">
+
+                <h2>Student Portal</h2>
+
+                <p>
+                    Students can log in and post messages.
+                    Messages are automatically analysed by
+                    the cyberbullying detection system.
+                </p>
+
+                <a href="/student-login">
+                    Student Login
+                </a>
+
+            </div>
+
+
+            <!-- ADMINISTRATOR PORTAL -->
+
+            <div class="portal">
+
+                <h2>Administrator Portal</h2>
+
+                <p>
+                    Administrators can monitor student posts,
+                    view AI detection results and manage alerts.
+                </p>
+
+                <a href="/login">
+                    Administrator Login
+                </a>
+
+            </div>
+
+
+        </div>
+
+
+        <div class="footer">
+
+            <p>
+                Nish Institution
+            </p>
+
+        </div>
+
+
+    </div>
+
+
+</body>
+
+</html>
