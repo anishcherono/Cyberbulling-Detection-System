@@ -739,31 +739,33 @@
                     </td>
 
                     <td>
+                        <form
+                            action="{{ url_for('admin.send_admin_decision', alert_id=alert[0]) }}"
+                            method="POST"
+                            class="admin-decision-form"
+                        >
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <label class="sr-only" for="decision-{{ alert[0] }}">Decision</label>
+                            <select id="decision-{{ alert[0] }}" name="action" required>
+                                <option value="notify_only">Notify student only</option>
+                                <option value="warning">Issue formal warning</option>
+                                <option value="temporary_restriction">Temporary restriction</option>
+                                <option value="account_ban">Permanent account ban</option>
+                            </select>
+                            <button type="submit" class="read-button">Approve and enforce</button>
+                        </form>
 
                         {% if alert[6] == "unread" %}
-
                         <form
                             action="/mark-alert-read/{{ alert[0] }}"
                             method="POST"
                         >
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-                            <button
-                                type="submit"
-                                class="read-button"
-                            >
-                                Mark as Read
-                            </button>
-
+                            <button type="submit" class="read-button">Mark as Read</button>
                         </form>
-
-
                         {% else %}
-
                         Read
-
                         {% endif %}
-
                     </td>
 
                 </tr>

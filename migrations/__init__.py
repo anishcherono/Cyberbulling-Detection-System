@@ -1,9 +1,14 @@
 from extensions import close_database, get_connection
-from migrations.versions import v0001_initial_schema, v0002_messaging_and_report_targets
+from migrations.versions import (
+    v0001_initial_schema,
+    v0002_messaging_and_report_targets,
+    v0003_admin_decisions,
+)
 
 MIGRATIONS = (
     (1, "Create initial application schema", v0001_initial_schema.upgrade),
     (2, "Add messaging and report targets", v0002_messaging_and_report_targets.upgrade),
+    (3, "Add administrator account decisions", v0003_admin_decisions.upgrade),
 )
 MIGRATION_LOCK_NAME = "cyberbullying_schema_migrations"
 

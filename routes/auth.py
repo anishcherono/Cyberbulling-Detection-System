@@ -40,10 +40,11 @@ def _find_user(identifier, role):
     with database_cursor() as (_, cursor):
         cursor.execute(
             """
-            SELECT user_id, full_name, username, password, role
+            SELECT user_id, full_name, username, password, role, status
             FROM Users
             WHERE (LOWER(email) = %s OR LOWER(username) = %s)
               AND LOWER(role) = %s
+              AND status NOT IN ('banned', 'temporarily_restricted')
             """,
             (identifier, identifier, role.lower()),
         )

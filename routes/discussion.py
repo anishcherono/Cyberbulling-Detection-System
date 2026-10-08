@@ -2,6 +2,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request, sessio
 
 from ai_detector import detect_with_ai
 from extensions import database_cursor, get_message_from_request
+from message_policy import get_delivery_decision
 
 discussion_bp = Blueprint("discussion", __name__)
 
@@ -172,7 +173,6 @@ def send_message():
         return "Recipient institution email is required.", 400
 
     result, confidence = detect_with_ai(message)
-    status = "review_required" if result.startswith("Cyberbullying") else "checked"
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
@@ -184,16 +184,44 @@ def send_message():
         recipient = cursor.fetchone()
         if recipient is None:
             return "No institution user was found with that email.", 404
-        cursor.execute(
-            """
-            INSERT INTO Messages
-            (sender_id, recipient_id, message_text, detection_result, confidence, status)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (sender_id, recipient[0], message, result, confidence, status),
-        )
+
+        decision = get_delivery_decision(result, confidence, recipient[0])
+        if not decision["delivery_allowed"]:
+            cursor.execute(
+                """
+                INSERT INTO Messages
+                (sender_id, recipient_id, message_text, detection_result,
+                 confidence, status)
+                VALUES (%s, NULL, %s, %s, %s, %s)
+                """,
+                (
+                    sender_id,
+                    message,
+                    result,
+                    confidence,
+                    decision["status"],
+                ),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO Messages
+                (sender_id, recipient_id, message_text, detection_result,
+                 confidence, status)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    sender_id,
+                    decision["recipient_id"],
+                    message,
+                    result,
+                    confidence,
+                    decision["status"],
+                ),
+            )
+
         message_id = cursor.lastrowid
-        if result.startswith("Cyberbullying"):
+        if not decision["delivery_allowed"]:
             cursor.execute(
                 """
                 INSERT INTO Alerts (message_id, alert_type, alert_message, status)
@@ -202,10 +230,24 @@ def send_message():
                 (
                     message_id,
                     "Cyberbullying",
-                    "Cyberbullying detected in a direct message.",
+                    decision["notification_message"] +
+                    f" Blocked message: {message}",
                     "unread",
                 ),
             )
+            cursor.execute(
+                """
+                INSERT INTO Notifications
+                (user_id, notification_type, notification_message)
+                VALUES (%s, %s, %s)
+                """,
+                (
+                    sender_id,
+                    "cyberbullying_blocked",
+                    decision["notification_message"],
+                ),
+            )
+
     destination = (
         "teacher.teacher_dashboard"
         if sender_role == "Lecturer"

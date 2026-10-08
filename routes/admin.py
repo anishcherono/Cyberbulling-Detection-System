@@ -1,6 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from extensions import database_cursor
+from message_policy import get_admin_decision, get_admin_enforcement_result
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -116,7 +117,8 @@ def admin_dashboard():
         cursor.execute(
             """
             SELECT Alerts.alert_id, Alerts.message_id, Users.full_name, Alerts.alert_type,
-                   Alerts.alert_message, Alerts.date_created, Alerts.status
+                   Alerts.alert_message, Alerts.date_created, Alerts.status,
+                   Messages.confidence
             FROM Alerts JOIN Messages ON Alerts.message_id = Messages.message_id
             JOIN Users ON Messages.sender_id = Users.user_id
             ORDER BY Alerts.alert_id DESC LIMIT 10
@@ -147,6 +149,81 @@ def mark_alert_read(alert_id):
         return _admin_login_redirect()
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute("UPDATE Alerts SET status = 'read' WHERE alert_id = %s", (alert_id,))
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+@admin_bp.route("/admin-decision/<int:alert_id>", methods=["POST"])
+def send_admin_decision(alert_id):
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+    action = (request.form.get("action") or "notify_only").strip()
+    valid_actions = {
+        "notify_only",
+        "warning",
+        "temporary_restriction",
+        "account_ban",
+    }
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            SELECT Messages.message_id, Messages.sender_id,
+                   Messages.detection_result, Messages.confidence
+            FROM Alerts
+            JOIN Messages ON Alerts.message_id = Messages.message_id
+            WHERE Alerts.alert_id = %s
+            """,
+            (alert_id,),
+        )
+        alert = cursor.fetchone()
+        if alert is None:
+            return "The alert no longer exists.", 404
+
+        message_id, sender_id, detection_result, confidence = alert
+        decision = get_admin_decision(detection_result, confidence)
+        if action not in valid_actions:
+            return "Choose a valid administrative decision.", 400
+        if not decision["is_cyberbullying"]:
+            return "Only cyberbullying alerts can receive an administrative action.", 400
+
+        enforcement = get_admin_enforcement_result(action, confidence)
+        cursor.execute(
+            "UPDATE Alerts SET status = 'reviewed' WHERE alert_id = %s",
+            (alert_id,),
+        )
+        cursor.execute(
+            "UPDATE Messages SET status = %s WHERE message_id = %s",
+            (enforcement["status_update"], message_id),
+        )
+        if action == "account_ban":
+            cursor.execute(
+                "UPDATE Users SET status = 'banned' WHERE user_id = %s",
+                (sender_id,),
+            )
+        elif action == "temporary_restriction":
+            cursor.execute(
+                "UPDATE Users SET status = 'temporarily_restricted' "
+                "WHERE user_id = %s",
+                (sender_id,),
+            )
+        elif action == "warning":
+            cursor.execute(
+                "UPDATE Users SET status = 'warning_issued' WHERE user_id = %s",
+                (sender_id,),
+            )
+
+        cursor.execute(
+            """
+            INSERT INTO Notifications
+            (user_id, notification_type, notification_message)
+            VALUES (%s, %s, %s)
+            """,
+            (
+                sender_id,
+                "admin_decision",
+                enforcement["notification_message"],
+            ),
+        )
+
     return redirect(url_for("admin.admin_dashboard"))
 
 
