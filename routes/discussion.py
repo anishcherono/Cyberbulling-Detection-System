@@ -2,7 +2,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request, sessio
 
 from ai_detector import detect_with_ai
 from extensions import database_cursor, get_message_from_request
-from message_policy import get_delivery_decision
+from message_policy import format_blocked_notification, get_delivery_decision
 from user_directory import normalize_role
 
 discussion_bp = Blueprint("discussion", __name__)
@@ -240,8 +240,9 @@ def send_message():
                 (
                     message_id,
                     "Cyberbullying",
-                    decision["notification_message"] +
-                    f" Blocked message: {message}",
+                    format_blocked_notification(
+                        decision["notification_message"], message
+                    ),
                     "unread",
                 ),
             )
@@ -254,7 +255,9 @@ def send_message():
                 (
                     sender_id,
                     "cyberbullying_blocked",
-                    decision["notification_message"],
+                    format_blocked_notification(
+                        decision["notification_message"], message
+                    ),
                 ),
             )
 

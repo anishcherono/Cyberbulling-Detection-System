@@ -358,6 +358,30 @@
             {% endif %}
         </div>
 
+        <!-- REGISTERED LECTURERS -->
+
+        <div class="section student-directory">
+            <h2>Registered Lecturers</h2>
+            {% if lecturers %}
+            <table>
+                <tr>
+                    <th>Lecturer name</th>
+                    <th>Lecturer ID</th>
+                    <th>Institution email</th>
+                </tr>
+                {% for lecturer in lecturers %}
+                <tr>
+                    <td>{{ lecturer[0] }}</td>
+                    <td>{{ lecturer[1] or "Not provided" }}</td>
+                    <td>{{ lecturer[2] or "Not provided" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No lecturer accounts have been registered yet.</p>
+            {% endif %}
+        </div>
+
         <!-- RESTRICTED ACCOUNTS -->
 
         <div class="section student-directory">
@@ -388,6 +412,39 @@
             </table>
             {% else %}
             <p>No accounts are currently temporarily restricted.</p>
+            {% endif %}
+        </div>
+
+        <!-- BANNED ACCOUNTS -->
+
+        <div class="section student-directory">
+            <h2>Ban Enforcement</h2>
+            {% if banned_users %}
+            <table>
+                <tr>
+                    <th>User name</th>
+                    <th>Student ID</th>
+                    <th>Institution email</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                {% for user in banned_users %}
+                <tr>
+                    <td>{{ user[1] }}</td>
+                    <td>{{ user[2] or "Not provided" }}</td>
+                    <td>{{ user[3] }}</td>
+                    <td>{{ user[4] }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.unban_account', user_id=user[0]) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="read-button">Unban account</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No accounts are currently banned.</p>
             {% endif %}
         </div>
 
@@ -696,126 +753,106 @@
         <!-- CYBERBULLYING ALERTS -->
 
         <div class="section">
+            <h2>Cyberbullying Alerts</h2>
 
-            <h2>
-                Cyberbullying Alerts
-            </h2>
-
-
-            {% if recent_alerts %}
-
-            <table>
-
-                <tr>
-
-                    <th>Alert ID</th>
-
-                    <th>Message ID</th>
-
-                    <th>Student</th>
-
-                    <th>Alert Type</th>
-
-                    <th>Alert Message</th>
-
-                    <th>Date</th>
-
-                    <th>Status</th>
-
-                    <th>Action</th>
-
-                </tr>
-
-
-                {% for alert in recent_alerts %}
-
-                <tr>
-
-                    <td>
-                        {{ alert[0] }}
-                    </td>
-
-                    <td>
-                        {{ alert[1] }}
-                    </td>
-
-                    <td>
-                        {{ alert[2] }}
-                    </td>
-
-                    <td>
-
-                        {% if alert[3] == "Cyberbullying" %}
-
-                        <span class="alert">
+            <div class="section">
+                <h3>Pending Review</h3>
+                {% if pending_alerts %}
+                <table>
+                    <tr>
+                        <th>Alert ID</th>
+                        <th>Message ID</th>
+                        <th>Student</th>
+                        <th>Alert Type</th>
+                        <th>Alert Message</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    {% for alert in pending_alerts %}
+                    <tr>
+                        <td>{{ alert[0] }}</td>
+                        <td>{{ alert[1] }}</td>
+                        <td>{{ alert[2] }}</td>
+                        <td>
+                            {% if alert[3] == "Cyberbullying" %}
+                            <span class="alert">{{ alert[3] }}</span>
+                            {% else %}
                             {{ alert[3] }}
-                        </span>
+                            {% endif %}
+                        </td>
+                        <td>{{ alert[4] }}</td>
+                        <td>{{ alert[5] }}</td>
+                        <td class="status">{{ alert[6] }}</td>
+                        <td>
+                            <form
+                                action="{{ url_for('admin.send_admin_decision', alert_id=alert[0]) }}"
+                                method="POST"
+                                class="admin-decision-form"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label class="sr-only" for="decision-{{ alert[0] }}">Decision</label>
+                                <select id="decision-{{ alert[0] }}" name="action" required>
+                                    <option value="notify_only">Notify student only</option>
+                                    <option value="warning">Issue formal warning</option>
+                                    <option value="temporary_restriction">Temporary restriction</option>
+                                    <option value="account_ban">Permanent account ban</option>
+                                </select>
+                                <button type="submit" class="read-button">Approve and enforce</button>
+                            </form>
+                            <form
+                                action="{{ url_for('admin.mark_alert_read', alert_id=alert[0]) }}"
+                                method="POST"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="read-button">Mark as read</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>No alerts require review.</p>
+                {% endif %}
+            </div>
 
-                        {% else %}
-
-                        {{ alert[3] }}
-
-                        {% endif %}
-
-                    </td>
-
-                    <td>
-                        {{ alert[4] }}
-                    </td>
-
-                    <td>
-                        {{ alert[5] }}
-                    </td>
-
-                    <td class="status">
-                        {{ alert[6] }}
-                    </td>
-
-                    <td>
-                        <form
-                            action="{{ url_for('admin.send_admin_decision', alert_id=alert[0]) }}"
-                            method="POST"
-                            class="admin-decision-form"
-                        >
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <label class="sr-only" for="decision-{{ alert[0] }}">Decision</label>
-                            <select id="decision-{{ alert[0] }}" name="action" required>
-                                <option value="notify_only">Notify student only</option>
-                                <option value="warning">Issue formal warning</option>
-                                <option value="temporary_restriction">Temporary restriction</option>
-                                <option value="account_ban">Permanent account ban</option>
-                            </select>
-                            <button type="submit" class="read-button">Approve and enforce</button>
-                        </form>
-
-                        {% if alert[6] == "unread" %}
-                        <form
-                            action="/mark-alert-read/{{ alert[0] }}"
-                            method="POST"
-                        >
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="read-button">Mark as Read</button>
-                        </form>
-                        {% else %}
-                        Read
-                        {% endif %}
-                    </td>
-
-                </tr>
-
-                {% endfor %}
-
-            </table>
-
-
-            {% else %}
-
-            <p>
-                No cyberbullying alerts.
-            </p>
-
-            {% endif %}
-
+            <div class="section">
+                <h3>Reviewed Alerts</h3>
+                {% if reviewed_alerts %}
+                <table>
+                    <tr>
+                        <th>Alert ID</th>
+                        <th>Message ID</th>
+                        <th>Student</th>
+                        <th>Alert Type</th>
+                        <th>Alert Message</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    {% for alert in reviewed_alerts %}
+                    <tr>
+                        <td>{{ alert[0] }}</td>
+                        <td>{{ alert[1] }}</td>
+                        <td>{{ alert[2] }}</td>
+                        <td>
+                            {% if alert[3] == "Cyberbullying" %}
+                            <span class="alert">{{ alert[3] }}</span>
+                            {% else %}
+                            {{ alert[3] }}
+                            {% endif %}
+                        </td>
+                        <td>{{ alert[4] }}</td>
+                        <td>{{ alert[5] }}</td>
+                        <td class="status">{{ alert[6] }}</td>
+                        <td>Reviewed</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>No alerts have been reviewed.</p>
+                {% endif %}
+            </div>
         </div>
 
 

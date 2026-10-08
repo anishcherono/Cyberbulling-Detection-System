@@ -1,7 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from extensions import database_cursor
-from message_policy import get_admin_decision, get_admin_enforcement_result
+from message_policy import get_admin_decision, get_admin_enforcement_result, is_banned_status
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -77,6 +77,15 @@ def admin_dashboard():
         students = cursor.fetchall()
         cursor.execute(
             """
+            SELECT full_name, institution_id, email
+            FROM Users
+            WHERE LOWER(role) IN ('lecturer', 'teacher')
+            ORDER BY full_name ASC
+            """
+        )
+        lecturers = cursor.fetchall()
+        cursor.execute(
+            """
             SELECT user_id, full_name, institution_id, email, status
             FROM Users
             WHERE status = 'temporarily_restricted'
@@ -84,6 +93,15 @@ def admin_dashboard():
             """
         )
         restricted_users = cursor.fetchall()
+        cursor.execute(
+            """
+            SELECT user_id, full_name, institution_id, email, status
+            FROM Users
+            WHERE LOWER(TRIM(status)) = 'banned'
+            ORDER BY full_name ASC
+            """
+        )
+        banned_users = cursor.fetchall()
         cursor.execute("SELECT COUNT(*) FROM Messages")
         total_messages = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM Alerts")
@@ -130,15 +148,30 @@ def admin_dashboard():
                    Messages.confidence
             FROM Alerts JOIN Messages ON Alerts.message_id = Messages.message_id
             JOIN Users ON Messages.sender_id = Users.user_id
-            ORDER BY Alerts.alert_id DESC LIMIT 10
+            WHERE Alerts.status = 'unread'
+            ORDER BY Alerts.alert_id DESC
             """
         )
-        recent_alerts = cursor.fetchall()
+        pending_alerts = cursor.fetchall()
+        cursor.execute(
+            """
+            SELECT Alerts.alert_id, Alerts.message_id, Users.full_name, Alerts.alert_type,
+                   Alerts.alert_message, Alerts.date_created, Alerts.status,
+                   Messages.confidence
+            FROM Alerts JOIN Messages ON Alerts.message_id = Messages.message_id
+            JOIN Users ON Messages.sender_id = Users.user_id
+            WHERE Alerts.status = 'reviewed'
+            ORDER BY Alerts.alert_id DESC
+            """
+        )
+        reviewed_alerts = cursor.fetchall()
     return render_template(
         "dashboard.html",
         total_users=total_users,
         students=students,
+        lecturers=lecturers,
         restricted_users=restricted_users,
+        banned_users=banned_users,
         total_messages=total_messages,
         total_alerts=total_alerts,
         unread_alerts=unread_alerts,
@@ -149,7 +182,8 @@ def admin_dashboard():
         result_breakdown=result_breakdown,
         daily_activity=daily_activity,
         recent_messages=recent_messages,
-        recent_alerts=recent_alerts,
+        pending_alerts=pending_alerts,
+        reviewed_alerts=reviewed_alerts,
     )
 
 
@@ -178,6 +212,24 @@ def remove_restriction(user_id):
         )
         if cursor.rowcount == 0:
             return "The account is not currently temporarily restricted.", 400
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+@admin_bp.route("/unban-account/<int:user_id>", methods=["POST"])
+def unban_account(user_id):
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            UPDATE Users
+            SET status = 'active'
+            WHERE user_id = %s AND status = 'banned'
+            """,
+            (user_id,),
+        )
+        if cursor.rowcount == 0:
+            return "The account is not currently banned.", 400
     return redirect(url_for("admin.admin_dashboard"))
 
 

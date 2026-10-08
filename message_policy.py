@@ -1,6 +1,22 @@
 CYBERBULLY_RESULT_PREFIX = "Cyberbullying"
 
 
+def is_banned_status(status):
+    """Return whether a database status represents a banned account."""
+    return str(status or "").strip().lower() == "banned"
+
+
+def is_account_blocked(status):
+    """Return whether an account status prevents authenticated access."""
+    normalized_status = str(status or "").strip().lower()
+    return normalized_status in {"banned", "temporarily_restricted"}
+
+
+def format_blocked_notification(notification_message, blocked_message):
+    """Return the complete message shown to a sender after an AI block."""
+    return f"{notification_message} Blocked message: {blocked_message}"
+
+
 def get_delivery_decision(detection_result, confidence, destination_user_id):
     """Block cyberbullying messages using the AI verdict and confidence."""
     is_cyberbullying = str(detection_result).startswith(CYBERBULLY_RESULT_PREFIX)

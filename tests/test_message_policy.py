@@ -1,10 +1,13 @@
 import unittest
 
 from message_policy import (
+    format_blocked_notification,
     get_admin_action_suggestions,
     get_admin_decision,
     get_admin_enforcement_result,
     get_delivery_decision,
+    is_account_blocked,
+    is_banned_status,
     requires_admin_review,
 )
 
@@ -25,6 +28,25 @@ class MessageDeliveryPolicyTests(unittest.TestCase):
         self.assertTrue(decision["delivery_allowed"])
         self.assertEqual(decision["recipient_id"], 42)
         self.assertEqual(decision["status"], "checked")
+
+    def test_blocked_notification_includes_the_original_message(self):
+        notification = format_blocked_notification(
+            "This message was detected as cyberbullying by AI.",
+            "Please stop this behaviour.",
+        )
+
+        self.assertIn("This message was detected as cyberbullying by AI.", notification)
+        self.assertIn("Blocked message: Please stop this behaviour.", notification)
+
+    def test_banned_status_is_normalized_for_login_and_listing(self):
+        self.assertTrue(is_banned_status("Banned"))
+        self.assertTrue(is_banned_status(" banned "))
+        self.assertFalse(is_banned_status("active"))
+
+    def test_temporarily_restricted_status_is_blocked(self):
+        self.assertTrue(is_account_blocked("TEMPORARILY_RESTRICTED"))
+        self.assertTrue(is_account_blocked(" banned "))
+        self.assertFalse(is_account_blocked("active"))
 
     def test_admin_may_enforce_a_decision(self):
         decision = get_admin_decision("Cyberbullying", 0.97)

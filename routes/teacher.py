@@ -2,6 +2,7 @@ from flask import Blueprint, redirect, render_template, request, session, url_fo
 
 from ai_detector import detect_with_ai
 from extensions import database_cursor, get_message_from_request
+from message_policy import is_account_blocked
 
 teacher_bp = Blueprint("teacher", __name__)
 
@@ -9,6 +10,19 @@ teacher_bp = Blueprint("teacher", __name__)
 def _teacher_required():
     if not session.get("teacher_logged_in"):
         return redirect(url_for("auth.lecturer_login"))
+    user_id = session.get("teacher_user_id")
+    if user_id is not None:
+        with database_cursor() as (_, cursor):
+            cursor.execute(
+                "SELECT status FROM Users WHERE user_id = %s",
+                (user_id,),
+            )
+            account = cursor.fetchone()
+        if account is None or is_account_blocked(account[0]):
+            session.pop("teacher_logged_in", None)
+            session.pop("teacher_user_id", None)
+            session.pop("teacher_name", None)
+            return redirect(url_for("auth.lecturer_login"))
     return None
 
 

@@ -6,6 +6,7 @@ from extensions import (
     database_cursor,
     get_message_from_request,
 )
+from message_policy import is_account_blocked
 
 student_bp = Blueprint("student", __name__)
 
@@ -14,10 +15,30 @@ def _student_login_redirect():
     return redirect(url_for("auth.student_login"))
 
 
-@student_bp.route("/student-message-delete", methods=["POST"])
-def delete_message():
+def _student_required():
     if not session.get("student_logged_in"):
         return _student_login_redirect()
+    user_id = session.get("student_user_id")
+    if user_id is not None:
+        with database_cursor() as (_, cursor):
+            cursor.execute(
+                "SELECT status FROM Users WHERE user_id = %s",
+                (user_id,),
+            )
+            account = cursor.fetchone()
+        if account is None or is_account_blocked(account[0]):
+            session.pop("student_logged_in", None)
+            session.pop("student_user_id", None)
+            session.pop("student_name", None)
+            return _student_login_redirect()
+    return None
+
+
+@student_bp.route("/student-message-delete", methods=["POST"])
+def delete_message():
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
     message_id = request.form.get("message_id", type=int)
     if message_id is None:
         return "A message is required.", 400
@@ -38,8 +59,9 @@ def delete_message():
 
 @student_bp.route("/student-inbox-delete", methods=["POST"])
 def delete_inbox_message():
-    if not session.get("student_logged_in"):
-        return _student_login_redirect()
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
     message_id = request.form.get("message_id", type=int)
     if message_id is None:
         return "A message is required.", 400
@@ -59,8 +81,9 @@ def delete_inbox_message():
 
 @student_bp.route("/student-dashboard")
 def student_dashboard():
-    if not session.get("student_logged_in"):
-        return _student_login_redirect()
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
     with database_cursor() as (_, cursor):
         cursor.execute(
             """
@@ -147,8 +170,9 @@ def _save_public_post(message):
 
 @student_bp.route("/student-post", methods=["POST"])
 def student_post():
-    if not session.get("student_logged_in"):
-        return _student_login_redirect()
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
     message, error = get_message_from_request()
     if error:
         return error, 400
@@ -158,8 +182,9 @@ def student_post():
 
 @student_bp.route("/report", methods=["POST"])
 def report_message():
-    if not session.get("student_logged_in"):
-        return _student_login_redirect()
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
     message_id = request.form.get("message_id", type=int)
     reason = (request.form.get("reason") or "").strip()
     if message_id is None or not reason:

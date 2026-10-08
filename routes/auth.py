@@ -2,6 +2,7 @@ from flask import Blueprint, redirect, render_template, request, session, url_fo
 from werkzeug.security import generate_password_hash
 
 from extensions import database_cursor, verify_password
+from message_policy import is_account_blocked, is_banned_status
 
 auth_bp = Blueprint("auth", __name__)
 STUDENT_EMAIL_DOMAIN = "@students.nish.edu"
@@ -36,15 +37,20 @@ def _login_identifier():
     ).strip().lower()
 
 
-def _find_user(identifier, role):
+def _find_user(identifier, role, include_restricted=False):
+    status_filter = (
+        ""
+        if include_restricted
+        else "AND status NOT IN ('banned', 'temporarily_restricted')"
+    )
     with database_cursor() as (_, cursor):
         cursor.execute(
-            """
+            f"""
             SELECT user_id, full_name, username, password, role, status
             FROM Users
             WHERE (LOWER(email) = %s OR LOWER(username) = %s)
               AND LOWER(role) = %s
-              AND status NOT IN ('banned', 'temporarily_restricted')
+              {status_filter}
             """,
             (identifier, identifier, role.lower()),
         )
@@ -249,13 +255,17 @@ def student_login():
     if request.method == "POST":
         identifier = _login_identifier()
         password = request.form.get("password")
-        student = _find_user(identifier, "Student")
-        if student is not None and verify_password(password, student[3]):
+        student = _find_user(identifier, "Student", include_restricted=True)
+        if student is not None and is_banned_status(student[5]):
+            error = "Account banned. Contact admin."
+        elif student is not None and verify_password(password, student[3]):
             _set_authenticated_session("student", student)
             return redirect(url_for("student.student_dashboard"))
+        else:
+            error = "Invalid student email or password."
         return render_template(
             "student_login.html",
-            error="Invalid student email or password.",
+            error=error,
             identifier=request.form.get("identifier", ""),
         ), 401
     return render_template("student_login.html")
