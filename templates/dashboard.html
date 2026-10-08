@@ -358,6 +358,39 @@
             {% endif %}
         </div>
 
+        <!-- RESTRICTED ACCOUNTS -->
+
+        <div class="section student-directory">
+            <h2>Temporarily Restricted Accounts</h2>
+            {% if restricted_users %}
+            <table>
+                <tr>
+                    <th>User name</th>
+                    <th>Student ID</th>
+                    <th>Institution email</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                {% for user in restricted_users %}
+                <tr>
+                    <td>{{ user[1] }}</td>
+                    <td>{{ user[2] or "Not provided" }}</td>
+                    <td>{{ user[3] }}</td>
+                    <td>{{ user[4] }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.remove_restriction', user_id=user[0]) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="read-button">Remove restriction</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No accounts are currently temporarily restricted.</p>
+            {% endif %}
+        </div>
+
 
         <!-- AI DETECTION ANALYTICS -->
 

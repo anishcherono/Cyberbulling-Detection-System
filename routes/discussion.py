@@ -3,6 +3,7 @@ from flask import Blueprint, jsonify, redirect, render_template, request, sessio
 from ai_detector import detect_with_ai
 from extensions import database_cursor, get_message_from_request
 from message_policy import get_delivery_decision
+from user_directory import normalize_role
 
 discussion_bp = Blueprint("discussion", __name__)
 
@@ -134,29 +135,38 @@ def report_content():
 
 @discussion_bp.route("/message-recipients")
 def message_recipients():
-    user_id, _ = _current_user()
+    user_id, sender_role = _current_user()
     if user_id is None:
         return jsonify({"recipients": []}), 401
     query = (request.args.get("q") or "").strip().lower()
     if len(query) < 2:
         return jsonify({"recipients": []})
+
     with database_cursor() as (_, cursor):
         cursor.execute(
             """
-            SELECT user_id, full_name, email, role
+            SELECT user_id, full_name, email, role, status
             FROM Users
             WHERE user_id <> %s
+              AND status = 'active'
+              AND LOWER(role) IN ('student', 'teacher', 'lecturer')
               AND email IS NOT NULL
               AND (LOWER(email) LIKE %s OR LOWER(full_name) LIKE %s)
             ORDER BY full_name ASC
-            LIMIT 10
+            LIMIT 20
             """,
             (user_id, f"%{query}%", f"%{query}%"),
         )
-        recipients = [
-            {"id": row[0], "name": row[1], "email": row[2], "role": row[3]}
-            for row in cursor.fetchall()
-        ]
+        recipients = []
+        for row in cursor.fetchall():
+            recipients.append(
+                {
+                    "id": row[0],
+                    "name": row[1],
+                    "email": row[2],
+                    "role": normalize_role(row[3]),
+                }
+            )
     return jsonify({"recipients": recipients})
 
 

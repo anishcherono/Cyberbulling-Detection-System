@@ -17,6 +17,7 @@ from routes.auth import auth_bp
 from routes.discussion import discussion_bp
 from routes.student import student_bp
 from routes.teacher import teacher_bp
+from user_directory import seed_student_ids_in_database
 
 load_dotenv()
 
@@ -26,6 +27,8 @@ def create_app():
     configure_app(application)
     run_migrations()
     ensure_default_admin()
+    with database_cursor(commit=True) as (_, cursor):
+        seed_student_ids_in_database(cursor)
     application.register_blueprint(auth_bp)
     application.register_blueprint(student_bp)
     application.register_blueprint(teacher_bp)

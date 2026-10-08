@@ -75,6 +75,15 @@ def admin_dashboard():
             """
         )
         students = cursor.fetchall()
+        cursor.execute(
+            """
+            SELECT user_id, full_name, institution_id, email, status
+            FROM Users
+            WHERE status = 'temporarily_restricted'
+            ORDER BY full_name ASC
+            """
+        )
+        restricted_users = cursor.fetchall()
         cursor.execute("SELECT COUNT(*) FROM Messages")
         total_messages = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM Alerts")
@@ -129,6 +138,7 @@ def admin_dashboard():
         "dashboard.html",
         total_users=total_users,
         students=students,
+        restricted_users=restricted_users,
         total_messages=total_messages,
         total_alerts=total_alerts,
         unread_alerts=unread_alerts,
@@ -149,6 +159,25 @@ def mark_alert_read(alert_id):
         return _admin_login_redirect()
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute("UPDATE Alerts SET status = 'read' WHERE alert_id = %s", (alert_id,))
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+@admin_bp.route("/remove-restriction/<int:user_id>", methods=["POST"])
+def remove_restriction(user_id):
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+    with database_cursor(commit=True) as (_, cursor):
+        cursor.execute(
+            """
+            UPDATE Users
+            SET status = 'active'
+            WHERE user_id = %s
+              AND status = 'temporarily_restricted'
+            """,
+            (user_id,),
+        )
+        if cursor.rowcount == 0:
+            return "The account is not currently temporarily restricted.", 400
     return redirect(url_for("admin.admin_dashboard"))
 
 
