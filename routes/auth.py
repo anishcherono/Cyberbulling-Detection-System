@@ -2,7 +2,7 @@ from flask import Blueprint, redirect, render_template, request, session, url_fo
 from werkzeug.security import generate_password_hash
 
 from extensions import database_cursor, verify_password
-from message_policy import is_account_blocked, is_banned_status
+from message_policy import is_account_blocked
 
 auth_bp = Blueprint("auth", __name__)
 STUDENT_EMAIL_DOMAIN = "@students.nish.edu"
@@ -256,8 +256,8 @@ def student_login():
         identifier = _login_identifier()
         password = request.form.get("password")
         student = _find_user(identifier, "Student", include_restricted=True)
-        if student is not None and is_banned_status(student[5]):
-            error = "Account banned. Contact admin."
+        if student is not None and is_account_blocked(student[5]):
+            error = "Account restricted. Contact admin."
         elif student is not None and verify_password(password, student[3]):
             _set_authenticated_session("student", student)
             return redirect(url_for("student.student_dashboard"))

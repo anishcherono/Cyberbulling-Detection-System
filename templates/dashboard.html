@@ -187,6 +187,48 @@
             overflow-wrap: anywhere;
         }
 
+        .restricted-account-table {
+            min-width: 780px;
+            max-width: 980px;
+            margin: 0 auto;
+            table-layout: fixed;
+        }
+
+        .restricted-account-table th:nth-child(1),
+        .restricted-account-table td:nth-child(1) {
+            width: 20%;
+        }
+
+        .restricted-account-table th:nth-child(2),
+        .restricted-account-table td:nth-child(2) {
+            width: 20%;
+        }
+
+        .restricted-account-table th:nth-child(3),
+        .restricted-account-table td:nth-child(3) {
+            width: 22%;
+        }
+
+        .restricted-account-table th:nth-child(4),
+        .restricted-account-table td:nth-child(4) {
+            width: 12%;
+        }
+
+        .restricted-account-table th:nth-child(5),
+        .restricted-account-table td:nth-child(5) {
+            width: 18%;
+        }
+
+        .restricted-account-table th:nth-child(6),
+        .restricted-account-table td:nth-child(6) {
+            width: 8%;
+        }
+
+        .admin-message-cell {
+            white-space: normal;
+            line-height: 1.4;
+        }
+
         .banned-account-table {
             min-width: 620px;
             max-width: 760px;
@@ -425,12 +467,13 @@
         <div class="section student-directory">
             <h2>Temporarily Restricted Accounts</h2>
             {% if restricted_users %}
-            <table>
+            <table class="restricted-account-table">
                 <tr>
                     <th>User name</th>
                     <th>Student ID</th>
                     <th>Institution email</th>
                     <th>Status</th>
+                    <th>Admin message</th>
                     <th>Action</th>
                 </tr>
                 {% for user in restricted_users %}
@@ -439,6 +482,7 @@
                     <td>{{ user[2] or "Not provided" }}</td>
                     <td>{{ user[3] }}</td>
                     <td>{{ user[4] }}</td>
+                    <td class="admin-message-cell">{{ user[5] or "No administrator message available." }}</td>
                     <td>
                         <form action="{{ url_for('admin.remove_restriction', user_id=user[0]) }}" method="POST">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

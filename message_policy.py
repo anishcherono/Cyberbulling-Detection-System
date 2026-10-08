@@ -96,7 +96,7 @@ def get_admin_enforcement_result(action, confidence):
     status_update = {
         "notify_only": "reviewed",
         "warning": "warning_issued",
-        "temporary_restriction": "temporarily_restricted",
+        "temporary_restriction": "restricted",
         "account_ban": "banned",
     }
     return {

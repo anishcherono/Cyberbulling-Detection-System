@@ -86,10 +86,20 @@ def admin_dashboard():
         lecturers = cursor.fetchall()
         cursor.execute(
             """
-            SELECT user_id, full_name, institution_id, email, status
-            FROM Users
-            WHERE status = 'temporarily_restricted'
-            ORDER BY full_name ASC
+            SELECT u.user_id, u.full_name, u.institution_id, u.email, u.status,
+                   n.notification_message
+            FROM Users u
+            LEFT JOIN Notifications n
+              ON n.user_id = u.user_id
+             AND n.notification_type = 'admin_decision'
+             AND n.notification_id = (
+                 SELECT MAX(notification_id)
+                 FROM Notifications latest
+                 WHERE latest.user_id = u.user_id
+                   AND latest.notification_type = 'admin_decision'
+             )
+            WHERE LOWER(TRIM(u.status)) = 'temporarily_restricted'
+            ORDER BY u.full_name ASC
             """
         )
         restricted_users = cursor.fetchall()
