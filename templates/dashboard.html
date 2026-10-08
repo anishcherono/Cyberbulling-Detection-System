@@ -187,6 +187,44 @@
             overflow-wrap: anywhere;
         }
 
+        .banned-account-table {
+            min-width: 620px;
+            max-width: 760px;
+            margin: 0 auto;
+            table-layout: fixed;
+        }
+
+        .banned-account-table th:nth-child(1),
+        .banned-account-table td:nth-child(1) {
+            width: 28%;
+        }
+
+        .banned-account-table th:nth-child(2),
+        .banned-account-table td:nth-child(2) {
+            width: 20%;
+        }
+
+        .banned-account-table th:nth-child(3),
+        .banned-account-table td:nth-child(3) {
+            width: 32%;
+        }
+
+        .banned-account-table th:nth-child(4),
+        .banned-account-table td:nth-child(4) {
+            width: 10%;
+        }
+
+        .banned-account-table th:nth-child(5),
+        .banned-account-table td:nth-child(5) {
+            width: 10%;
+        }
+
+        .banned-account-table .unban-button {
+            padding: 6px 9px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
         /* ALERT */
 
         .alert {
@@ -420,7 +458,7 @@
         <div class="section student-directory">
             <h2>Ban Enforcement</h2>
             {% if banned_users %}
-            <table>
+            <table class="banned-account-table">
                 <tr>
                     <th>User name</th>
                     <th>Student ID</th>
@@ -437,7 +475,7 @@
                     <td>
                         <form action="{{ url_for('admin.unban_account', user_id=user[0]) }}" method="POST">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="read-button">Unban account</button>
+                            <button type="submit" class="read-button unban-button">Unban</button>
                         </form>
                     </td>
                 </tr>
