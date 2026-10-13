@@ -1,4 +1,4 @@
-﻿import os
+import os
 import threading
 import webbrowser
 
@@ -15,6 +15,7 @@ from migrations import run_migrations
 from routes.admin import admin_bp
 from routes.auth import auth_bp
 from routes.discussion import discussion_bp
+from routes.donations import donations_bp
 from routes.student import student_bp
 from routes.teacher import teacher_bp
 from user_directory import seed_student_ids_in_database
@@ -34,6 +35,7 @@ def create_app():
     application.register_blueprint(teacher_bp)
     application.register_blueprint(admin_bp)
     application.register_blueprint(discussion_bp)
+    application.register_blueprint(donations_bp)
 
     @application.route("/")
     def home():
@@ -90,6 +92,7 @@ if __name__ == "__main__":
     print("Student Portal:   http://127.0.0.1:5000/student-dashboard")
     print("Admin Dashboard:  http://127.0.0.1:5000/dashboard")
     print("Reports:          http://127.0.0.1:5000/reports")
+    print("Donate (M-Pesa):  http://127.0.0.1:5000/donate")
     print("")
     print("Opening Nish Institution home page in Firefox...")
     print("==============================================")

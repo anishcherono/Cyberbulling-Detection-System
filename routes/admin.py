@@ -254,13 +254,18 @@ def send_admin_decision(alert_id):
         "temporary_restriction",
         "account_ban",
     }
+    from decision_templates import build_formal_decision_notice
+
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
             SELECT Messages.message_id, Messages.sender_id,
-                   Messages.detection_result, Messages.confidence
+                   Messages.detection_result, Messages.confidence,
+                   Users.full_name, Users.institution_id, Users.email,
+                   Messages.message_text, Messages.date_sent
             FROM Alerts
             JOIN Messages ON Alerts.message_id = Messages.message_id
+            JOIN Users ON Messages.sender_id = Users.user_id
             WHERE Alerts.alert_id = %s
             """,
             (alert_id,),
@@ -269,37 +274,48 @@ def send_admin_decision(alert_id):
         if alert is None:
             return "The alert no longer exists.", 404
 
-        message_id, sender_id, detection_result, confidence = alert
+        (
+            message_id,
+            sender_id,
+            detection_result,
+            confidence,
+            student_name,
+            institution_id,
+            student_email,
+            message_text,
+            date_sent,
+        ) = alert
+
         decision = get_admin_decision(detection_result, confidence)
         if action not in valid_actions:
             return "Choose a valid administrative decision.", 400
         if not decision["is_cyberbullying"]:
             return "Only cyberbullying alerts can receive an administrative action.", 400
 
-        enforcement = get_admin_enforcement_result(action, confidence)
+        notice = build_formal_decision_notice(
+            student_name=student_name,
+            institution_id=institution_id,
+            student_email=student_email,
+            action=action,
+            message_excerpt=message_text,
+            confidence=confidence,
+            incident_date=date_sent,
+            alert_id=alert_id,
+            admin_name=session.get("admin_name", "Office of the Dean of Students"),
+        )
+
         cursor.execute(
             "UPDATE Alerts SET status = 'reviewed' WHERE alert_id = %s",
             (alert_id,),
         )
         cursor.execute(
             "UPDATE Messages SET status = %s WHERE message_id = %s",
-            (enforcement["status_update"], message_id),
+            (notice["status_update"], message_id),
         )
-        if action == "account_ban":
+        if notice["account_status"] != "active":
             cursor.execute(
-                "UPDATE Users SET status = 'banned' WHERE user_id = %s",
-                (sender_id,),
-            )
-        elif action == "temporary_restriction":
-            cursor.execute(
-                "UPDATE Users SET status = 'temporarily_restricted' "
-                "WHERE user_id = %s",
-                (sender_id,),
-            )
-        elif action == "warning":
-            cursor.execute(
-                "UPDATE Users SET status = 'warning_issued' WHERE user_id = %s",
-                (sender_id,),
+                "UPDATE Users SET status = %s WHERE user_id = %s",
+                (notice["account_status"], sender_id),
             )
 
         cursor.execute(
@@ -311,11 +327,50 @@ def send_admin_decision(alert_id):
             (
                 sender_id,
                 "admin_decision",
-                enforcement["notification_message"],
+                notice["formal_text"],
             ),
         )
 
     return redirect(url_for("admin.admin_dashboard"))
+
+
+@admin_bp.route("/admin/notice/<int:notification_id>")
+def view_admin_notice(notification_id):
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+
+    from decision_templates import notice_from_notification_row
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT n.notification_id, n.notification_message, n.date_created,
+                   u.full_name, u.institution_id, u.email
+            FROM Notifications n
+            JOIN Users u ON n.user_id = u.user_id
+            WHERE n.notification_id = %s
+            """,
+            (notification_id,),
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return "Disciplinary decision notice not found.", 404
+
+    notice_dict = notice_from_notification_row(
+        notification_id=row[0],
+        raw_text=row[1],
+        date_created=row[2],
+        student_name=row[3],
+        institution_id=row[4],
+        email=row[5],
+    )
+
+    return render_template(
+        "formal_notice.html",
+        notice=notice_dict,
+        back_url=url_for("admin.admin_dashboard"),
+    )
 
 
 @admin_bp.route("/reports")
@@ -345,6 +400,91 @@ def reports():
         )
         report_rows = cursor.fetchall()
     return render_template("reports.html", reports=report_rows)
+
+
+@admin_bp.route("/admin/report/print")
+@admin_bp.route("/reports/print")
+def print_admin_report():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+
+    from datetime import datetime
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT Reports.report_id, Reports.message_id,
+                   COALESCE(Messages.message_text, Announcements.content,
+                            DiscussionReplies.reply_text) AS reported_content,
+                   Users.full_name, Reports.reason, Reports.date_reported,
+                   Reports.action_taken, Reports.status,
+                   sender.full_name, recipient.full_name,
+                   Messages.detection_result, Messages.confidence,
+                   Messages.status
+            FROM Reports
+            JOIN Users ON Reports.reported_by = Users.user_id
+            LEFT JOIN Messages ON Reports.message_id = Messages.message_id
+            LEFT JOIN Users sender ON Messages.sender_id = sender.user_id
+            LEFT JOIN Users recipient ON Messages.recipient_id = recipient.user_id
+            LEFT JOIN Announcements ON Reports.announcement_id = Announcements.announcement_id
+            LEFT JOIN DiscussionReplies ON Reports.reply_id = DiscussionReplies.reply_id
+            ORDER BY Reports.report_id DESC
+            """
+        )
+        report_rows = cursor.fetchall()
+
+    records = []
+    flagged_count = 0
+    clean_count = 0
+    resolved_count = 0
+
+    for r in report_rows:
+        det = str(r[10] or "")
+        is_cb = det.startswith("Cyberbullying")
+        if is_cb:
+            flagged_count += 1
+        else:
+            clean_count += 1
+
+        stat = str(r[7] or "")
+        if stat.lower() == "resolved":
+            resolved_count += 1
+
+        date_str = r[5].strftime("%b %d, %Y %H:%M") if hasattr(r[5], "strftime") else str(r[5] or "")
+
+        records.append({
+            "ref_id": f"RPT-{r[0]:04d}",
+            "date_str": date_str,
+            "sender": r[8] or "Anonymous / System",
+            "recipient": r[9] or "Public Forum",
+            "reported_by": r[3],
+            "content": r[2] or "Content deleted",
+            "reason": r[4],
+            "is_cyberbullying": is_cb,
+            "confidence": float(r[11]) if r[11] is not None else None,
+            "action_taken": r[6],
+            "status": r[7],
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_items": len(records),
+        "flagged_count": flagged_count,
+        "clean_count": clean_count,
+        "resolved_count": resolved_count,
+    }
+
+    return render_template(
+        "printable_report.html",
+        report_title="OFFICIAL CYBERBULLYING INCIDENT & MONITORING REPORT",
+        report_reference=f"NISH/ADM/RPT-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=session.get("admin_name", "System Administrator"),
+        user_role="Institutional Administrator",
+        summary=summary,
+        records=records,
+        back_url=url_for("admin.reports"),
+    )
 
 
 @admin_bp.route("/admin-delete-reported-message", methods=["POST"])

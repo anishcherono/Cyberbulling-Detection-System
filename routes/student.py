@@ -211,3 +211,137 @@ def report_message():
     <p>The message has been reported to the administrator.</p>
     <a href="/student-dashboard">Back to Student Dashboard</a>
     """
+
+
+@student_bp.route("/student/report/print")
+def print_student_report():
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
+
+    from datetime import datetime
+
+    user_id = session.get("student_user_id")
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT full_name, institution_id, email
+            FROM Users WHERE user_id = %s
+            """,
+            (user_id,),
+        )
+        user_info = cursor.fetchone() or ("Student", "N/A", "N/A")
+
+        cursor.execute(
+            """
+            SELECT m.message_id, m.date_sent, sender.full_name, recipient.full_name,
+                   m.message_text, m.detection_result, m.confidence, m.status,
+                   r.reason, r.action_taken, r.status
+            FROM Messages m
+            JOIN Users sender ON m.sender_id = sender.user_id
+            LEFT JOIN Users recipient ON m.recipient_id = recipient.user_id
+            LEFT JOIN Reports r ON m.message_id = r.message_id
+            WHERE m.sender_id = %s OR m.recipient_id = %s
+            ORDER BY m.message_id DESC
+            LIMIT 50
+            """,
+            (user_id, user_id),
+        )
+        rows = cursor.fetchall()
+
+    records = []
+    flagged_count = 0
+    clean_count = 0
+    resolved_count = 0
+
+    for r in rows:
+        det = str(r[5] or "")
+        is_cb = det.startswith("Cyberbullying")
+        if is_cb:
+            flagged_count += 1
+        else:
+            clean_count += 1
+
+        stat = str(r[10] or r[7] or "")
+        if stat.lower() in ("resolved", "checked"):
+            resolved_count += 1
+
+        date_str = r[1].strftime("%b %d, %Y %H:%M") if hasattr(r[1], "strftime") else str(r[1] or "")
+
+        records.append({
+            "ref_id": f"MSG-{r[0]:04d}",
+            "date_str": date_str,
+            "sender": r[2] or "Me",
+            "recipient": r[3] or "Public / Direct",
+            "reported_by": "Self" if r[8] else None,
+            "content": r[4],
+            "reason": r[8],
+            "is_cyberbullying": is_cb,
+            "confidence": float(r[6]) if r[6] is not None else None,
+            "action_taken": r[9] or "Standard Filter Check",
+            "status": r[10] or r[7] or "Recorded",
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_items": len(records),
+        "flagged_count": flagged_count,
+        "clean_count": clean_count,
+        "resolved_count": resolved_count,
+    }
+
+    inst_id = user_info[1] or "N/A"
+    return render_template(
+        "printable_report.html",
+        report_title="OFFICIAL STUDENT DIGITAL COMMUNICATION & SAFETY RECORD",
+        report_reference=f"NISH/STU/REC-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=user_info[0],
+        user_role=f"Student (ID: {inst_id})",
+        summary=summary,
+        records=records,
+        back_url=url_for("student.student_dashboard"),
+    )
+
+
+@student_bp.route("/student/notice/<int:notification_id>")
+def view_student_notice(notification_id):
+    redirect_response = _student_required()
+    if redirect_response:
+        return redirect_response
+
+    from decision_templates import notice_from_notification_row
+
+    user_id = session.get("student_user_id")
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT n.notification_id, n.notification_message, n.date_created,
+                   u.full_name, u.institution_id, u.email
+            FROM Notifications n
+            JOIN Users u ON n.user_id = u.user_id
+            WHERE n.notification_id = %s AND n.user_id = %s
+            """,
+            (notification_id, user_id),
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return "Disciplinary decision notice not found.", 404
+
+    notice_dict = notice_from_notification_row(
+        notification_id=row[0],
+        raw_text=row[1],
+        date_created=row[2],
+        student_name=row[3],
+        institution_id=row[4],
+        email=row[5],
+    )
+
+    return render_template(
+        "formal_notice.html",
+        notice=notice_dict,
+        back_url=url_for("student.student_dashboard"),
+    )

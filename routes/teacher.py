@@ -218,3 +218,123 @@ def create_announcement():
             ),
         )
     return redirect(url_for("teacher.teacher_dashboard"))
+
+
+@teacher_bp.route("/teacher/report/print")
+@teacher_bp.route("/lecturer/report/print")
+def print_teacher_report():
+    redirect_response = _teacher_required()
+    if redirect_response:
+        return redirect_response
+
+    from datetime import datetime
+
+    teacher_id = session.get("teacher_user_id")
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT full_name, institution_id, email
+            FROM Users WHERE user_id = %s
+            """,
+            (teacher_id,),
+        )
+        user_info = cursor.fetchone() or ("Lecturer", "N/A", "N/A")
+
+        cursor.execute(
+            """
+            SELECT announcement_id, title, content, detection_result,
+                   confidence, date_created, status
+            FROM Announcements
+            WHERE teacher_id = %s
+            ORDER BY announcement_id DESC
+            LIMIT 50
+            """,
+            (teacher_id,),
+        )
+        announcements = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT r.reply_id, r.date_created, u.full_name, r.reply_text,
+                   r.status
+            FROM DiscussionReplies r
+            JOIN Users u ON r.author_id = u.user_id
+            WHERE r.announcement_id IN (
+                SELECT announcement_id FROM Announcements WHERE teacher_id = %s
+            )
+            ORDER BY r.reply_id DESC
+            LIMIT 50
+            """,
+            (teacher_id,),
+        )
+        replies = cursor.fetchall()
+
+    records = []
+    flagged_count = 0
+    clean_count = 0
+    resolved_count = 0
+
+    for a in announcements:
+        det = str(a[3] or "")
+        is_cb = det.startswith("Cyberbullying")
+        if is_cb:
+            flagged_count += 1
+        else:
+            clean_count += 1
+
+        if str(a[6]).lower() in ("published", "checked", "resolved"):
+            resolved_count += 1
+
+        date_str = a[5].strftime("%b %d, %Y %H:%M") if hasattr(a[5], "strftime") else str(a[5] or "")
+        records.append({
+            "ref_id": f"ANN-{a[0]:04d}",
+            "date_str": date_str,
+            "sender": user_info[0],
+            "recipient": "All Enrolled Students",
+            "reported_by": None,
+            "content": f"[{a[1]}] {a[2]}",
+            "reason": None,
+            "is_cyberbullying": is_cb,
+            "confidence": float(a[4]) if a[4] is not None else None,
+            "action_taken": "Announcement Broadcast",
+            "status": a[6],
+        })
+
+    for rep in replies:
+        clean_count += 1
+        date_str = rep[1].strftime("%b %d, %Y %H:%M") if hasattr(rep[1], "strftime") else str(rep[1] or "")
+        records.append({
+            "ref_id": f"REP-{rep[0]:04d}",
+            "date_str": date_str,
+            "sender": rep[2],
+            "recipient": user_info[0],
+            "reported_by": None,
+            "content": rep[3],
+            "reason": None,
+            "is_cyberbullying": False,
+            "confidence": None,
+            "action_taken": "Discussion Thread Moderation",
+            "status": rep[4] or "checked",
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_items": len(records),
+        "flagged_count": flagged_count,
+        "clean_count": clean_count,
+        "resolved_count": resolved_count,
+    }
+
+    inst_id = user_info[1] or "Faculty"
+    return render_template(
+        "printable_report.html",
+        report_title="OFFICIAL COURSE DISCUSSION & SAFETY MONITORING REPORT",
+        report_reference=f"NISH/LEC/MON-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=user_info[0],
+        user_role=f"Lecturer / Faculty ({inst_id})",
+        summary=summary,
+        records=records,
+        back_url=url_for("teacher.teacher_dashboard"),
+    )

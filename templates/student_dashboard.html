@@ -253,6 +253,7 @@
             <p class="site-title">Nish Institution · Student Portal</p>
             <nav class="nav" aria-label="Student navigation">
                 <a href="/student-dashboard">My Portal</a>
+                <a href="/student/report/print" target="_blank" style="background: #00A859; border-color: #00A859; font-weight: bold;">&#128438; Print Activity Record</a>
                 <a href="/blog">Open Blog</a>
                 <a href="/student-logout">Log out</a>
             </nav>
@@ -289,10 +290,26 @@
         </section>
 
         <section class="panel">
-            <h2>Notifications</h2>
+            <h2>Notifications &amp; Administrative Decisions</h2>
             {% if notifications %}
                 {% for notification in notifications %}
-                    <p class="help-text"><strong>{{ notification[2] }}</strong><br>{{ notification[1] }}</p>
+                    {% if "OFFICIAL ADMINISTRATIVE DECISION" in notification[1] or "DISCIPLINARY" in notification[1] %}
+                        <div style="background: #fff5f5; border: 1px solid #feb2b2; border-left: 5px solid #e53e3e; padding: 14px 16px; margin-bottom: 12px; border-radius: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <strong style="color: #9b2c2c; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">&#9888; Official Disciplinary Notice</strong>
+                                <span style="font-size: 12px; color: #718096;">{{ notification[2] }}</span>
+                            </div>
+                            <pre style="white-space: pre-wrap; font-family: inherit; font-size: 13px; color: #2d3748; margin: 0 0 10px; background: #fff; padding: 10px; border: 1px solid #edf2f7; border-radius: 3px;">{{ notification[1] }}</pre>
+                            <a href="/student/notice/{{ notification[0] }}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #174A7C; color: #fff; text-decoration: none; border-radius: 3px; font-weight: bold; font-size: 13px;">
+                                &#128196; View &amp; Print Official Document Letter
+                            </a>
+                        </div>
+                    {% else %}
+                        <div style="padding: 10px 0; border-bottom: 1px solid #edf2f7;">
+                            <strong style="color: #4a5568; font-size: 12px;">{{ notification[2] }}</strong>
+                            <p style="margin: 4px 0 0; color: #2d3748;">{{ notification[1] }}</p>
+                        </div>
+                    {% endif %}
                 {% endfor %}
             {% else %}
                 <p class="empty-state">You have no notifications.</p>

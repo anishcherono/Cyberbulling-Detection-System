@@ -38,13 +38,19 @@
             <h1>Nish Institution · Administrator</h1>
             <nav aria-label="Administrator navigation">
                 <a href="/admin">Dashboard</a>
+                <a href="/admin/report/print" target="_blank" style="background: #00A859; font-weight: bold; border-color: #00A859;">&#128438; Print Formal Report</a>
                 <a href="/logout">Log out</a>
             </nav>
         </div>
     </header>
     <main>
         <section class="panel">
-            <h2>Reported messages</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h2 style="margin: 0;">Reported messages</h2>
+                <a href="/admin/report/print" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: #174A7C; color: #fff; text-decoration: none; border-radius: 3px; font-size: 13px; font-weight: bold;">
+                    &#128438; Generate Formal Document
+                </a>
+            </div>
             <p>Review student reports and record the action taken.</p>
             {% if reports %}
                 <div class="table-wrap">

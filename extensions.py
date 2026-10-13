@@ -32,6 +32,8 @@ def configure_app(app):
     @app.before_request
     def validate_csrf():
         if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            if request.path.startswith("/donations/callback"):
+                return
             submitted = request.form.get("csrf_token", "")
             expected = request.cookies.get("csrf_token", "")
             if not submitted or not expected or not hmac.compare_digest(
@@ -65,14 +67,39 @@ def _set_csrf_cookie(response, token):
     return response
 
 
+_DATABASE_ENGINE = None
+
+
 def get_connection():
-    return mysql.connector.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        user=os.getenv("DB_USER", "root"),
-        password=os.getenv("DB_PASSWORD", ""),
-        database=os.getenv("DB_NAME", "Cyberbulling_system"),
-        use_pure=True,
-    )
+    global _DATABASE_ENGINE
+
+    if _DATABASE_ENGINE == "sqlite":
+        from sqlite_fallback import get_sqlite_connection
+        return get_sqlite_connection()
+
+    try:
+        conn = mysql.connector.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            user=os.getenv("DB_USER", "root"),
+            password=os.getenv("DB_PASSWORD", ""),
+            database=os.getenv("DB_NAME", "Cyberbulling_system"),
+            port=int(os.getenv("DB_PORT", "3306")),
+            use_pure=True,
+            connection_timeout=2,
+        )
+        if _DATABASE_ENGINE is None:
+            _DATABASE_ENGINE = "mysql"
+            logging.info("Connected to MySQL database on %s.", os.getenv("DB_HOST", "localhost"))
+        return conn
+    except Exception as exc:
+        from sqlite_fallback import get_sqlite_connection
+        if _DATABASE_ENGINE is None:
+            _DATABASE_ENGINE = "sqlite"
+            logging.warning(
+                "MySQL server is not running or unreachable (%s). Automatically falling back to SQLite.",
+                exc,
+            )
+        return get_sqlite_connection()
 
 
 @contextmanager

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ report_title }} - Nish Institution</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Times New Roman", Times, Georgia, serif;
+            color: #111;
+            background: #e9ecef;
+            line-height: 1.5;
+        }
+
+        /* Top Action Bar (hidden when printing) */
+        .no-print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #174A7C;
+            color: #fff;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-family: Arial, sans-serif;
+        }
+        .toolbar-info {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-print {
+            background: #00A859;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-print:hover {
+            background: #008744;
+        }
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 7px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-back:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* Formal Document Sheet Container */
+        .document-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 30px auto 60px;
+            background: #fff;
+            padding: 55px 65px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            border: 1px solid #dcdcdc;
+            position: relative;
+        }
+
+        /* Formal Letterhead Header */
+        .letterhead {
+            border-bottom: 3px double #174A7C;
+            padding-bottom: 18px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .letterhead-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .crest-svg {
+            width: 65px;
+            height: 65px;
+            fill: #174A7C;
+        }
+        .inst-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: bold;
+            letter-spacing: 0.8px;
+            color: #174A7C;
+            text-transform: uppercase;
+        }
+        .inst-dept {
+            margin: 2px 0 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #444;
+            font-weight: 600;
+        }
+        .inst-contact {
+            margin: 3px 0 0;
+            font-size: 12px;
+            color: #666;
+            font-family: Arial, sans-serif;
+        }
+        .classification-badge {
+            font-family: Arial, sans-serif;
+            border: 2px solid #8b0000;
+            color: #8b0000;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 2px;
+            text-align: center;
+        }
+
+        /* Document Subject & Metadata Block */
+        .document-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background: #fbfbfb;
+            border: 1px solid #e2e8f0;
+            padding: 14px 18px;
+            margin-bottom: 25px;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+        }
+        .meta-item {
+            margin: 2px 0;
+        }
+        .meta-label {
+            font-weight: bold;
+            color: #4a5568;
+            display: inline-block;
+            width: 140px;
+        }
+        .meta-val {
+            color: #1a202c;
+        }
+
+        .document-heading {
+            text-align: center;
+            margin: 0 0 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #111;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        /* Executive Metrics Summary */
+        .summary-box {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 28px;
+            font-family: Arial, sans-serif;
+        }
+        .summary-card {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            padding: 10px;
+            text-align: center;
+        }
+        .summary-card .number {
+            font-size: 20px;
+            font-weight: bold;
+            color: #174A7C;
+            margin-bottom: 2px;
+        }
+        .summary-card .label {
+            font-size: 11px;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        /* Section Titles */
+        .section-header {
+            font-size: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+            margin: 25px 0 12px;
+            color: #174A7C;
+            letter-spacing: 0.3px;
+        }
+
+        /* Formal Data Table */
+        table.formal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            margin-bottom: 25px;
+        }
+        table.formal-table th,
+        table.formal-table td {
+            border: 1px solid #94a3b8;
+            padding: 8px 10px;
+            vertical-align: top;
+            text-align: left;
+        }
+        table.formal-table th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+            font-family: Arial, sans-serif;
+        }
+        .badge {
+            display: inline-block;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .badge-cyberbullying {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #f87171;
+        }
+        .badge-clean {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .badge-pending {
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        .badge-resolved {
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #7dd3fc;
+        }
+
+        /* Formal Attestation & Sign-off Block */
+        .signoff-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #cbd5e1;
+            page-break-inside: avoid;
+        }
+        .attestation-statement {
+            font-style: italic;
+            font-size: 12.5px;
+            color: #333;
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        .signature-box {
+            padding-top: 35px;
+            border-top: 1px solid #000;
+        }
+        .signature-title {
+            font-weight: bold;
+            color: #111;
+        }
+        .signature-sub {
+            color: #555;
+            margin-top: 2px;
+        }
+
+        /* Institutional Stamp Box */
+        .stamp-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 25px;
+        }
+        .official-stamp {
+            border: 2px dashed #94a3b8;
+            padding: 16px 24px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            color: #64748b;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            width: 200px;
+        }
+
+        /* Formal Legal Footer */
+        .document-footer {
+            margin-top: 35px;
+            padding-top: 12px;
+            border-top: 1px solid #000;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #555;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Print Media Stylesheet */
+        @media print {
+            body {
+                background: #fff !important;
+                color: #000 !important;
+            }
+            .no-print-toolbar {
+                display: none !important;
+            }
+            .document-container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 15mm 18mm 15mm 18mm;
+            }
+            table.formal-table tr {
+                page-break-inside: avoid;
+            }
+            .signoff-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar (Hidden when Printing) -->
+    <div class="no-print-toolbar">
+        <div class="toolbar-info">
+            <strong>Formal Document Viewer</strong> &bull; {{ report_title }}
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="btn-print" onclick="window.print();">
+                <span>&#128438;</span> Print Report / Save as PDF
+            </button>
+            <a href="{{ back_url or '/' }}" class="btn-back">&larr; Back to Portal</a>
+        </div>
+    </div>
+
+    <!-- Official Document Sheet -->
+    <div class="document-container">
+        <!-- Letterhead -->
+        <header class="letterhead">
+            <div class="letterhead-left">
+                <!-- Academic Crest SVG -->
+                <svg class="crest-svg" viewBox="0 0 24 24">
+                    <path d="M12 2L1 7l11 5 9-4.09V17h2V7L12 2zm0 8.82L4.24 7 12 3.47 19.76 7 12 10.82zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                </svg>
+                <div>
+                    <h1 class="inst-title">Nish Institution</h1>
+                    <div class="inst-dept">Directorate of Student Affairs &amp; Digital Safety</div>
+                    <div class="inst-contact">Main Campus &bull; Academic Safety Division &bull; safety@nishinstitution.ac.ke</div>
+                </div>
+            </div>
+            <div class="classification-badge">
+                OFFICIAL RECORD<br>CONFIDENTIAL
+            </div>
+        </header>
+
+        <!-- Document Heading -->
+        <h2 class="document-heading">{{ report_title }}</h2>
+
+        <!-- Reference & Metadata Grid -->
+        <div class="document-meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">DOCUMENT REF:</span>
+                <span class="meta-val"><strong>{{ report_reference }}</strong></span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">DATE GENERATED:</span>
+                <span class="meta-val">{{ generated_at }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">COMPILED BY:</span>
+                <span class="meta-val">{{ user_name }} ({{ user_role }})</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">VERIFICATION STATUS:</span>
+                <span class="meta-val" style="color: #008744; font-weight: bold;">AUTHENTICATED</span>
+            </div>
+        </div>
+
+        <!-- Executive Metrics Summary -->
+        <div class="summary-box">
+            <div class="summary-card">
+                <div class="number">{{ summary.total_items }}</div>
+                <div class="label">Total Records</div>
+            </div>
+            <div class="summary-card">
+                <div class="number" style="color: #991b1b;">{{ summary.flagged_count }}</div>
+                <div class="label">Cyberbullying Flagged</div>
+            </div>
+            <div class="summary-card">
+                <div class="number" style="color: #166534;">{{ summary.clean_count }}</div>
+                <div class="label">Cleared / Safe</div>
+            </div>
+            <div class="summary-card">
+                <div class="number">{{ summary.resolved_count }}</div>
+                <div class="label">Action Resolved</div>
+            </div>
+        </div>
+
+        <!-- Records Table -->
+        <div class="section-header">Case &amp; Incident Documentation Log</div>
+        {% if records %}
+            <table class="formal-table">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">Ref #</th>
+                        <th style="width: 15%;">Date &amp; Time</th>
+                        <th style="width: 18%;">Involved Parties</th>
+                        <th>Message Content / Case Details</th>
+                        <th style="width: 17%;">AI Assessment</th>
+                        <th style="width: 14%;">Action &amp; Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in records %}
+                        <tr>
+                            <td><strong>{{ item.ref_id }}</strong></td>
+                            <td>{{ item.date_str }}</td>
+                            <td>
+                                <div><strong>From:</strong> {{ item.sender }}</div>
+                                {% if item.recipient %}
+                                    <div style="margin-top: 3px;"><strong>To:</strong> {{ item.recipient }}</div>
+                                {% endif %}
+                                {% if item.reported_by %}
+                                    <div style="margin-top: 3px; color: #555;"><strong>Rpt by:</strong> {{ item.reported_by }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <em>"{{ item.content }}"</em>
+                                {% if item.reason %}
+                                    <div style="margin-top: 4px; font-size: 11px; color: #b45309;">
+                                        <strong>Report Reason:</strong> {{ item.reason }}
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if item.is_cyberbullying %}
+                                    <span class="badge badge-cyberbullying">CYBERBULLYING</span>
+                                {% else %}
+                                    <span class="badge badge-clean">NOT CYBERBULLYING</span>
+                                {% endif %}
+                                {% if item.confidence is not none %}
+                                    <div style="font-size: 11px; margin-top: 3px; color: #555;">
+                                        Confidence: {{ "%.1f"|format(item.confidence * 100) }}%
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div><strong>{{ item.action_taken or "Under Review" }}</strong></div>
+                                <div style="margin-top: 4px;">
+                                    {% if item.status == "Resolved" %}
+                                        <span class="badge badge-resolved">Resolved</span>
+                                    {% elif item.status == "Pending" %}
+                                        <span class="badge badge-pending">Pending</span>
+                                    {% else %}
+                                        <span class="badge">{{ item.status or "Recorded" }}</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 25px; text-align: center; border: 1px dashed #cbd5e1; margin-bottom: 25px; color: #64748b; font-family: Arial, sans-serif;">
+                No incident or communication records found for this reporting period.
+            </div>
+        {% endif %}
+
+        <!-- Formal Attestation & Signatures -->
+        <section class="signoff-section">
+            <p class="attestation-statement">
+                I hereby declare that the entries and statistical evaluations detailed in this document are 
+                an authentic record generated by the automated AI Cyberbullying Detection System and verified 
+                under the institutional codes of Nish Institution. This document serves as official documentation for 
+                review by academic boards, student welfare officers, and disciplinary committees.
+            </p>
+
+            <div class="stamp-container">
+                <div class="official-stamp">
+                    Nish Institution<br>
+                    Office of Safety<br>
+                    [ Official Stamp ]
+                </div>
+            </div>
+
+            <div class="signatures-grid">
+                <div class="signature-box">
+                    <div class="signature-title">{{ user_name }}</div>
+                    <div class="signature-sub">Designation: {{ user_role }}</div>
+                    <div class="signature-sub">Reporting Officer / Submitter</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-title">Dean of Students / Institutional Administrator</div>
+                    <div class="signature-sub">Directorate of Digital Welfare &amp; Safety</div>
+                    <div class="signature-sub">Nish Institution Main Campus</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Confidentiality Notice & Legal Footer -->
+        <footer class="document-footer">
+            CONFIDENTIALITY NOTICE: This document contains confidential student and institutional communication records protected by institutional privacy policies. 
+            Unauthorized retention, copying, or forwarding of this document is strictly prohibited. Generated automatically by Nish Institution Safety Portal.
+        </footer>
+    </div>
+
+</body>
+</html>
