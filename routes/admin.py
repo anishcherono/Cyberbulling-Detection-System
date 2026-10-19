@@ -487,6 +487,220 @@ def print_admin_report():
     )
 
 
+@admin_bp.route("/admin/students/print")
+@admin_bp.route("/students/print")
+def print_students():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+
+    from datetime import datetime
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT user_id, full_name, institution_id, email, status, date_created
+            FROM Users
+            WHERE LOWER(role) = 'student'
+            ORDER BY full_name ASC
+            """
+        )
+        student_rows = cursor.fetchall()
+
+    students = []
+    active_count = 0
+    restricted_count = 0
+    banned_count = 0
+
+    for idx, s in enumerate(student_rows, start=1):
+        status = (s[4] or "active").strip().lower()
+        if status == "active":
+            active_count += 1
+            display_status = "Active"
+        elif status == "temporarily_restricted":
+            restricted_count += 1
+            display_status = "Restricted"
+        elif status == "banned":
+            banned_count += 1
+            display_status = "Banned"
+        else:
+            active_count += 1
+            display_status = status.capitalize()
+
+        date_str = s[5].strftime("%b %d, %Y") if hasattr(s[5], "strftime") else str(s[5] or "N/A")
+
+        students.append({
+            "index": idx,
+            "user_id": s[0],
+            "full_name": s[1],
+            "institution_id": s[2] or "Not provided",
+            "email": s[3] or "Not provided",
+            "status": display_status,
+            "raw_status": status,
+            "date_enrolled": date_str,
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_students": len(students),
+        "active_count": active_count,
+        "restricted_count": restricted_count,
+        "banned_count": banned_count,
+    }
+
+    return render_template(
+        "printable_students.html",
+        report_title="OFFICIAL ENROLLED STUDENTS DIRECTORY",
+        report_reference=f"NISH/ADM/STU-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=session.get("admin_name", "System Administrator"),
+        user_role="Institutional Administrator",
+        summary=summary,
+        students=students,
+        back_url=url_for("admin.admin_dashboard"),
+    )
+
+
+@admin_bp.route("/admin/lecturers/print")
+@admin_bp.route("/lecturers/print")
+def print_lecturers():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+
+    from datetime import datetime
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT user_id, full_name, institution_id, email, role, status, date_created
+            FROM Users
+            WHERE LOWER(role) IN ('lecturer', 'teacher')
+            ORDER BY full_name ASC
+            """
+        )
+        lecturer_rows = cursor.fetchall()
+
+    lecturers = []
+    active_count = 0
+
+    for idx, row in enumerate(lecturer_rows, start=1):
+        status = (row[5] or "active").strip().lower()
+        if status == "active":
+            active_count += 1
+            display_status = "Active"
+        else:
+            display_status = status.capitalize()
+
+        date_str = row[6].strftime("%b %d, %Y") if hasattr(row[6], "strftime") else str(row[6] or "N/A")
+
+        lecturers.append({
+            "index": idx,
+            "user_id": row[0],
+            "full_name": row[1],
+            "institution_id": row[2] or "Not provided",
+            "email": row[3] or "Not provided",
+            "role": (row[4] or "Lecturer").capitalize(),
+            "status": display_status,
+            "date_appointed": date_str,
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_lecturers": len(lecturers),
+        "active_count": active_count,
+    }
+
+    return render_template(
+        "printable_lecturers.html",
+        report_title="OFFICIAL FACULTY & LECTURERS DIRECTORY",
+        report_reference=f"NISH/ADM/FAC-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=session.get("admin_name", "System Administrator"),
+        user_role="Institutional Administrator",
+        summary=summary,
+        lecturers=lecturers,
+        back_url=url_for("admin.admin_dashboard"),
+    )
+
+
+@admin_bp.route("/admin/cyberbullying-messages/print")
+@admin_bp.route("/messages/cyberbullying/print")
+def print_cyberbullying_messages():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+
+    from datetime import datetime
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT Messages.message_id, Messages.message_text,
+                   sender.full_name, sender.institution_id,
+                   recipient.full_name,
+                   Messages.detection_result, Messages.confidence,
+                   Messages.status, Messages.date_sent
+            FROM Messages
+            JOIN Users sender ON Messages.sender_id = sender.user_id
+            LEFT JOIN Users recipient ON Messages.recipient_id = recipient.user_id
+            WHERE Messages.detection_result LIKE 'Cyberbullying%'
+            ORDER BY Messages.message_id DESC
+            """
+        )
+        msg_rows = cursor.fetchall()
+
+    records = []
+    high_risk_count = 0
+    unique_senders = set()
+    actioned_count = 0
+
+    for r in msg_rows:
+        conf = float(r[6]) if r[6] is not None else 0.0
+        if conf >= 0.85:
+            high_risk_count += 1
+
+        sender_name = r[2] or "Unknown Student"
+        unique_senders.add(sender_name)
+
+        status_val = str(r[7] or "checked").strip()
+        if status_val.lower() in ("deleted", "restricted", "banned", "warning", "actioned"):
+            actioned_count += 1
+
+        date_str = r[8].strftime("%b %d, %Y %H:%M") if hasattr(r[8], "strftime") else str(r[8] or "")
+
+        records.append({
+            "message_id": r[0],
+            "ref_id": f"CBM-{r[0]:04d}",
+            "date_str": date_str,
+            "sender_name": sender_name,
+            "sender_id_num": r[3] or "N/A",
+            "recipient_name": r[4] or "Public Forum / Broadcast",
+            "message_text": r[1],
+            "detection_result": r[5],
+            "confidence": conf,
+            "status": status_val,
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_flagged": len(records),
+        "high_risk_count": high_risk_count,
+        "unique_senders": len(unique_senders),
+        "actioned_count": actioned_count,
+    }
+
+    return render_template(
+        "printable_cyberbullying_messages.html",
+        report_title="OFFICIAL AI CYBERBULLYING DETECTION & FLAGGED MESSAGES LOG",
+        report_reference=f"NISH/ADM/CBM-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=session.get("admin_name", "System Administrator"),
+        user_role="Institutional Administrator",
+        summary=summary,
+        records=records,
+        back_url=url_for("admin.admin_dashboard"),
+    )
+
+
+
 @admin_bp.route("/admin-delete-reported-message", methods=["POST"])
 def delete_reported_message():
     if not session.get("admin_logged_in"):
