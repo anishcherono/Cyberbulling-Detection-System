@@ -79,20 +79,21 @@ app = create_app()
 
 
 if __name__ == "__main__":
-    url = "http://127.0.0.1:5000/"
+    port = int(os.getenv("PORT", 4040))
+    url = f"http://127.0.0.1:{port}/"
     print("")
     print("==============================================")
     print("        NISH INSTITUTION PORTAL")
     print("==============================================")
     print("")
     print("System is running on:")
-    print("Home:             http://127.0.0.1:5000/")
-    print("Student Login:    http://127.0.0.1:5000/student-login")
-    print("Admin Login:      http://127.0.0.1:5000/login")
-    print("Student Portal:   http://127.0.0.1:5000/student-dashboard")
-    print("Admin Dashboard:  http://127.0.0.1:5000/dashboard")
-    print("Reports:          http://127.0.0.1:5000/reports")
-    print("Donate (M-Pesa):  http://127.0.0.1:5000/donate")
+    print(f"Home:             http://127.0.0.1:{port}/")
+    print(f"Student Login:    http://127.0.0.1:{port}/student-login")
+    print(f"Admin Login:      http://127.0.0.1:{port}/login")
+    print(f"Student Portal:   http://127.0.0.1:{port}/student-dashboard")
+    print(f"Admin Dashboard:  http://127.0.0.1:{port}/dashboard")
+    print(f"Reports:          http://127.0.0.1:{port}/reports")
+    print(f"Donate (M-Pesa):  http://127.0.0.1:{port}/donate")
     print("")
     print("Opening Nish Institution home page in Firefox...")
     print("==============================================")
@@ -112,4 +113,4 @@ if __name__ == "__main__":
 
     if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
         threading.Timer(1.5, open_browser).start()
-    app.run(debug=True)
+    app.run(debug=True, port=port)
