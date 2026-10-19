@@ -8,6 +8,8 @@ import urllib.error
 import urllib.request
 import uuid
 
+import requests
+
 logger = logging.getLogger(__name__)
 
 _CACHED_TOKEN = None
@@ -39,6 +41,48 @@ def get_mpesa_config():
     }
 
 
+def get_oauth_token():
+    global _CACHED_TOKEN, _TOKEN_EXPIRY
+
+    now = datetime.now()
+    if _CACHED_TOKEN and _TOKEN_EXPIRY and now < _TOKEN_EXPIRY:
+        return _CACHED_TOKEN
+
+    cfg = get_mpesa_config()
+    if not cfg["consumer_key"] or not cfg["consumer_secret"]:
+        if cfg["mock_fallback"]:
+            logger.info("M-Pesa credentials not configured; using sandbox mock token.")
+            return "mock_sandbox_token"
+        raise ValueError("MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET must be set.")
+
+    token_url = f"{cfg['base_url']}/oauth/v1/generate?grant_type=client_credentials"
+    auth_str = f"{cfg['consumer_key']}:{cfg['consumer_secret']}"
+    auth_encoded = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
+
+    headers = {
+        "Authorization": f"Basic {auth_encoded}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    }
+
+    try:
+        resp = requests.get(token_url, headers=headers, timeout=15)
+        if resp.status_code == 200:
+            data = resp.json()
+            token = data.get("access_token")
+            expires_in = int(data.get("expires_in", 3599))
+            _CACHED_TOKEN = token
+            _TOKEN_EXPIRY = now + timedelta(seconds=max(expires_in - 60, 60))
+            return token
+        else:
+            raise RuntimeError(f"OAuth request failed with status {resp.status_code}: {resp.text}")
+    except Exception as exc:
+        logger.warning(f"Error fetching Safaricom OAuth token: {exc}")
+        if cfg["mock_fallback"]:
+            logger.info("Falling back to simulated token.")
+            return "mock_sandbox_token"
+        raise
+
+
 def format_phone_number(phone):
     """
     Normalizes phone numbers to Kenyan format 254XXXXXXXXX.
@@ -66,44 +110,6 @@ def format_phone_number(phone):
         )
 
     return cleaned
-
-
-def get_oauth_token():
-    global _CACHED_TOKEN, _TOKEN_EXPIRY
-
-    now = datetime.now()
-    if _CACHED_TOKEN and _TOKEN_EXPIRY and now < _TOKEN_EXPIRY:
-        return _CACHED_TOKEN
-
-    cfg = get_mpesa_config()
-    if not cfg["consumer_key"] or not cfg["consumer_secret"]:
-        if cfg["mock_fallback"]:
-            logger.info("M-Pesa credentials not configured; using sandbox mock token.")
-            return "mock_sandbox_token"
-        raise ValueError("MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET must be set.")
-
-    token_url = f"{cfg['base_url']}/oauth/v1/generate?grant_type=client_credentials"
-    auth_str = f"{cfg['consumer_key']}:{cfg['consumer_secret']}"
-    auth_encoded = base64.b64encode(auth_str.encode("utf-8")).decode("utf-8")
-
-    req = urllib.request.Request(token_url)
-    req.add_header("Authorization", f"Basic {auth_encoded}")
-
-    try:
-        with urllib.request.urlopen(req, timeout=15) as response:
-            resp_bytes = response.read()
-            data = json.loads(resp_bytes.decode("utf-8"))
-            token = data.get("access_token")
-            expires_in = int(data.get("expires_in", 3599))
-            _CACHED_TOKEN = token
-            _TOKEN_EXPIRY = now + timedelta(seconds=max(expires_in - 60, 60))
-            return token
-    except Exception as exc:
-        logger.warning(f"Error fetching Safaricom OAuth token: {exc}")
-        if cfg["mock_fallback"]:
-            logger.info("Falling back to simulated token.")
-            return "mock_sandbox_token"
-        raise
 
 
 def generate_password(shortcode, passkey, timestamp):
@@ -155,56 +161,55 @@ def initiate_stk_push(phone_number, amount, account_reference="NishDonation", tr
         "TransactionDesc": str(transaction_desc)[:13],
     }
 
-    req_data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(process_url, data=req_data, method="POST")
-    req.add_header("Authorization", f"Bearer {token}")
-    req.add_header("Content-Type", "application/json")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    }
 
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            resp_data = json.loads(resp.read().decode("utf-8"))
-            logger.info("Daraja STK push response: %s", resp_data)
+        resp = requests.post(process_url, json=payload, headers=headers, timeout=20)
+        resp_data = resp.json() if resp.content else {}
+        logger.info("Daraja STK push HTTP %s response: %s", resp.status_code, resp_data)
 
-            if resp_data.get("ResponseCode") == "0":
-                return {
-                    "success": True,
-                    "is_mock": False,
-                    "merchant_request_id": resp_data.get("MerchantRequestID"),
-                    "checkout_request_id": resp_data.get("CheckoutRequestID"),
-                    "customer_message": resp_data.get(
-                        "CustomerMessage",
-                        "Success. Request accepted for processing, enter your M-Pesa PIN on your phone.",
-                    ),
-                    "phone_number": formatted_phone,
-                    "amount": amount_val,
-                }
-            else:
-                error_msg = resp_data.get("errorMessage") or resp_data.get("ResponseDescription") or "STK Push request was rejected."
-                return {
-                    "success": False,
-                    "error": error_msg,
-                    "phone_number": formatted_phone,
-                }
-    except urllib.error.HTTPError as http_err:
-        try:
-            err_body = json.loads(http_err.read().decode("utf-8"))
-            err_msg = err_body.get("errorMessage") or err_body.get("ResponseDescription") or str(http_err)
-        except Exception:
-            err_msg = str(http_err)
-        logger.warning("HTTPError calling Daraja STK Push: %s", err_msg)
-        if cfg["mock_fallback"]:
-            mock_checkout_id = f"ws_CO_{datetime.now().strftime('%d%m%Y%H%M%S')}_{uuid.uuid4().hex[:8]}"
-            mock_merchant_id = f"MERCHANT_{uuid.uuid4().hex[:10]}"
+        if resp.status_code == 200 and resp_data.get("ResponseCode") == "0":
             return {
                 "success": True,
-                "is_mock": True,
-                "merchant_request_id": mock_merchant_id,
-                "checkout_request_id": mock_checkout_id,
-                "customer_message": "Prompt initiated (Sandbox Mode). Please enter PIN on your phone.",
+                "is_mock": False,
+                "merchant_request_id": resp_data.get("MerchantRequestID"),
+                "checkout_request_id": resp_data.get("CheckoutRequestID"),
+                "customer_message": resp_data.get(
+                    "CustomerMessage",
+                    "Success. Request accepted for processing, enter your M-Pesa PIN on your phone.",
+                ),
                 "phone_number": formatted_phone,
                 "amount": amount_val,
             }
-        return {"success": False, "error": err_msg, "phone_number": formatted_phone}
+        else:
+            error_msg = (
+                resp_data.get("errorMessage")
+                or resp_data.get("ResponseDescription")
+                or resp_data.get("CustomerMessage")
+                or f"STK Push rejected (HTTP {resp.status_code})"
+            )
+            logger.warning("Daraja STK Push rejected: %s", error_msg)
+            if cfg["mock_fallback"]:
+                mock_checkout_id = f"ws_CO_{datetime.now().strftime('%d%m%Y%H%M%S')}_{uuid.uuid4().hex[:8]}"
+                mock_merchant_id = f"MERCHANT_{uuid.uuid4().hex[:10]}"
+                return {
+                    "success": True,
+                    "is_mock": True,
+                    "merchant_request_id": mock_merchant_id,
+                    "checkout_request_id": mock_checkout_id,
+                    "customer_message": "Prompt initiated (Sandbox Mode). Please enter PIN on your phone.",
+                    "phone_number": formatted_phone,
+                    "amount": amount_val,
+                }
+            return {
+                "success": False,
+                "error": error_msg,
+                "phone_number": formatted_phone,
+            }
     except Exception as exc:
         logger.exception("Exception calling Daraja STK Push: %s", exc)
         if cfg["mock_fallback"]:
