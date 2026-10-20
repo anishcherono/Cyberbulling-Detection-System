@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ notice.title }} - Nish Institution</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Times New Roman", Times, Georgia, serif;
+            color: #111;
+            background: #e9ecef;
+            line-height: 1.6;
+        }
+
+        /* Top Action Bar (hidden when printing) */
+        .no-print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #174A7C;
+            color: #fff;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-family: Arial, sans-serif;
+        }
+        .toolbar-info {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-print {
+            background: #00A859;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-print:hover {
+            background: #008744;
+        }
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 7px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-back:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* Document Sheet */
+        .document-container {
+            width: 100%;
+            max-width: 860px;
+            margin: 30px auto 60px;
+            background: #fff;
+            padding: 55px 65px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            border: 1px solid #dcdcdc;
+            position: relative;
+        }
+
+        /* Formal Letterhead */
+        .letterhead {
+            border-bottom: 3px double #174A7C;
+            padding-bottom: 18px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .letterhead-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .crest-svg {
+            width: 65px;
+            height: 65px;
+            fill: #174A7C;
+        }
+        .inst-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: bold;
+            letter-spacing: 0.8px;
+            color: #174A7C;
+            text-transform: uppercase;
+        }
+        .inst-dept {
+            margin: 2px 0 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #444;
+            font-weight: 600;
+        }
+        .inst-contact {
+            margin: 3px 0 0;
+            font-size: 12px;
+            color: #666;
+            font-family: Arial, sans-serif;
+        }
+        .classification-badge {
+            font-family: Arial, sans-serif;
+            border: 2px solid #b91c1c;
+            color: #b91c1c;
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 2px;
+            text-align: center;
+        }
+
+        /* Formal Recipient Block */
+        .recipient-block {
+            margin-bottom: 25px;
+            font-family: Arial, sans-serif;
+            font-size: 13.5px;
+            line-height: 1.6;
+            background: #f8fafc;
+            border-left: 4px solid #174A7C;
+            padding: 14px 18px;
+        }
+        .recipient-row {
+            display: flex;
+            margin-bottom: 4px;
+        }
+        .recipient-label {
+            width: 140px;
+            font-weight: bold;
+            color: #475569;
+        }
+        .recipient-val {
+            color: #0f172a;
+        }
+
+        /* Subject Box */
+        .subject-box {
+            background: #fff;
+            border: 1px solid #cbd5e1;
+            padding: 12px 18px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        .subject-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #b91c1c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .subject-subtitle {
+            font-size: 13px;
+            color: #475569;
+            font-family: Arial, sans-serif;
+            margin-top: 4px;
+        }
+
+        /* Body Paragraphs */
+        .letter-body {
+            font-size: 14px;
+            text-align: justify;
+            margin-bottom: 25px;
+        }
+        .letter-body p {
+            margin: 0 0 16px;
+            text-indent: 25px;
+        }
+        .letter-body p.no-indent {
+            text-indent: 0;
+        }
+
+        /* Evidence Quote Box */
+        .evidence-box {
+            background: #fff5f5;
+            border-left: 4px solid #e53e3e;
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+        }
+        .evidence-quote {
+            font-style: italic;
+            color: #742a2a;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .evidence-meta {
+            font-size: 11.5px;
+            color: #9b2c2c;
+            display: flex;
+            gap: 16px;
+        }
+
+        /* Directive Highlight Box */
+        .directive-box {
+            background: #f0fdf4;
+            border: 1px solid #86efac;
+            border-left: 4px solid #16a34a;
+            padding: 14px 18px;
+            margin: 18px 0;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+        }
+        .directive-title {
+            font-weight: bold;
+            color: #15803d;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Sign-off & Stamp Section */
+        .signoff-section {
+            margin-top: 40px;
+            padding-top: 25px;
+            border-top: 1px solid #cbd5e1;
+            page-break-inside: avoid;
+        }
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-top: 30px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        .signature-box {
+            padding-top: 40px;
+            border-top: 1px solid #000;
+        }
+        .signature-title {
+            font-weight: bold;
+            color: #111;
+        }
+        .signature-sub {
+            color: #555;
+            margin-top: 2px;
+        }
+        .stamp-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 15px;
+        }
+        .official-stamp {
+            border: 2px dashed #b91c1c;
+            color: #b91c1c;
+            padding: 14px 20px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            width: 220px;
+            border-radius: 4px;
+        }
+
+        .document-footer {
+            margin-top: 35px;
+            padding-top: 12px;
+            border-top: 1px solid #000;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Print Media Styles */
+        @media print {
+            body {
+                background: #fff !important;
+                color: #000 !important;
+            }
+            .no-print-toolbar {
+                display: none !important;
+            }
+            .document-container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 15mm 20mm 15mm 20mm;
+            }
+            .signoff-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar -->
+    <div class="no-print-toolbar">
+        <div class="toolbar-info">
+            <strong>Official Notice Document</strong> &bull; {{ notice.case_ref }}
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="btn-print" onclick="window.print();">
+                <span>&#128438;</span> Print Notice / Save as PDF
+            </button>
+            <a href="{{ back_url or '/' }}" class="btn-back">&larr; Return</a>
+        </div>
+    </div>
+
+    <!-- Official Letter Sheet -->
+    <div class="document-container">
+        <!-- Letterhead -->
+        <header class="letterhead">
+            <div class="letterhead-left">
+                <svg class="crest-svg" viewBox="0 0 24 24">
+                    <path d="M12 2L1 7l11 5 9-4.09V17h2V7L12 2zm0 8.82L4.24 7 12 3.47 19.76 7 12 10.82zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                </svg>
+                <div>
+                    <h1 class="inst-title">Nish Institution</h1>
+                    <div class="inst-dept">Office of the Dean of Students &bull; Student Disciplinary Board</div>
+                    <div class="inst-contact">Academic Safety Division &bull; Directorate of Digital Welfare &bull; conduct@nishinstitution.ac.ke</div>
+                </div>
+            </div>
+            <div class="classification-badge">
+                OFFICIAL NOTICE<br>DISCIPLINARY
+            </div>
+        </header>
+
+        <!-- Autofilled Recipient & Metadata Grid -->
+        <div class="recipient-block">
+            <div class="recipient-row">
+                <span class="recipient-label">DOCUMENT REF:</span>
+                <span class="recipient-val"><strong>{{ notice.case_ref }}</strong></span>
+            </div>
+            <div class="recipient-row">
+                <span class="recipient-label">DATE OF ISSUANCE:</span>
+                <span class="recipient-val">{{ notice.decision_date_str }}</span>
+            </div>
+            <div class="recipient-row">
+                <span class="recipient-label">ISSUED TO (STUDENT):</span>
+                <span class="recipient-val"><strong>{{ notice.student_name }}</strong></span>
+            </div>
+            <div class="recipient-row">
+                <span class="recipient-label">INSTITUTION ID:</span>
+                <span class="recipient-val">{{ notice.institution_id }}</span>
+            </div>
+            <div class="recipient-row">
+                <span class="recipient-label">OFFICIAL EMAIL:</span>
+                <span class="recipient-val">{{ notice.student_email }}</span>
+            </div>
+            <div class="recipient-row">
+                <span class="recipient-label">SANCTION SEVERITY:</span>
+                <span class="recipient-val" style="color: #b91c1c; font-weight: bold;">{{ notice.severity }}</span>
+            </div>
+        </div>
+
+        <!-- Subject Line -->
+        <div class="subject-box">
+            <div class="subject-title">{{ notice.title }}</div>
+            <div class="subject-subtitle">{{ notice.subtitle }}</div>
+        </div>
+
+        <!-- Letter Body Content -->
+        <div class="letter-body">
+            <p class="no-indent">
+                Dear <strong>{{ notice.student_name }}</strong>,
+            </p>
+            <p>
+                This official communication serves as a formal notification that following systematic monitoring and subsequent review by the 
+                Administration, communication originating from your account on <strong>{{ notice.incident_date_str }}</strong> has been determined 
+                to be in direct violation of the <strong>Nish Institution Digital Communication Code of Conduct</strong> under 
+                <em>{{ notice.policy_clause }}</em>.
+            </p>
+
+            <!-- Evidence Block -->
+            <div class="evidence-box">
+                <div style="font-weight: bold; margin-bottom: 5px; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">
+                    Flagged Communication Evidence Record:
+                </div>
+                <div class="evidence-quote">"{{ notice.message_excerpt }}"</div>
+                <div class="evidence-meta">
+                    <span><strong>AI Verification Score:</strong> {{ "%.2f"|format(notice.confidence_pct) }}%</span>
+                    <span><strong>Assessment:</strong> Hostile / Cyberbullying Classification</span>
+                </div>
+            </div>
+
+            <!-- Directive & Sanction Box -->
+            <div class="directive-box">
+                <div class="directive-title">Official Sanction &amp; Directive of Administration:</div>
+                <div style="color: #14532d; font-weight: bold; margin-bottom: 6px;">{{ notice.sanction_summary }}</div>
+                <div style="color: #334155; line-height: 1.5;">{{ notice.directive }}</div>
+            </div>
+
+            <p>
+                Nish Institution takes digital harassment, offensive discourse, and cyberbullying with the highest gravity. Safe and respectful learning 
+                environments are fundamental to our community. Any further infractions will be escalated to immediate academic suspension or dismissal.
+            </p>
+
+            <p class="no-indent" style="font-size: 13px; color: #475569; background: #f8fafc; padding: 12px; border: 1px solid #e2e8f0;">
+                <strong>NOTICE OF RIGHT OF APPEAL:</strong> If you believe this determination was reached in error or wish to provide mitigating 
+                context, you have the right to file a written petition of appeal to the Office of the Dean of Students within 
+                <strong>seven (7) academic working days</strong> from the timestamp of this notice.
+            </p>
+        </div>
+
+        <!-- Signatures & Stamp -->
+        <section class="signoff-section">
+            <div class="stamp-container">
+                <div class="official-stamp">
+                    Nish Institution<br>
+                    Disciplinary Board<br>
+                    [ OFFICIAL SEAL ]
+                </div>
+            </div>
+
+            <div class="signatures-grid">
+                <div class="signature-box">
+                    <div class="signature-title">{{ notice.admin_authority }}</div>
+                    <div class="signature-sub">Directorate of Digital Welfare &amp; Safety</div>
+                    <div class="signature-sub">Nish Institution Main Campus</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-title">Dean of Students / Academic Registrar</div>
+                    <div class="signature-sub">Office of Student Affairs &amp; Conduct</div>
+                    <div class="signature-sub">Nish Institution Main Campus</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="document-footer">
+            CONFIDENTIAL DISCIPLINARY RECORD &bull; Nish Institution &bull; P.O. Box 100-20100 &bull; 
+            This document is an authenticated institutional record issued pursuant to Student Conduct Regulations Section 4.2.
+        </footer>
+    </div>
+
+</body>
+</html>

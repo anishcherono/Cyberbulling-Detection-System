@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Administrator Dashboard - Nish Institution</title>
+
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+
+        .header {
+            background-color: #174A7C;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+        }
+
+        .nav {
+            background-color: #222;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+
+        .nav a:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            width: 90%;
+            margin: 30px auto;
+        }
+
+        .welcome {
+            background-color: white;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #d6d6d6;
+        }
+
+        /* GENERAL STATISTICS */
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background-color: white;
+            padding: 14px 12px;
+            text-align: center;
+            border: 1px solid #d6d6d6;
+        }
+
+        .card h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .card p {
+            margin: 6px 0 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        /* AI ANALYTICS */
+
+        .analytics-title {
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+
+        .analytics-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .analytics-card {
+            background-color: white;
+            padding: 14px 12px;
+            text-align: center;
+            border: 1px solid #d6d6d6;
+        }
+
+        .analytics-card h2 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .analytics-card p {
+            color: #555;
+            margin: 6px 0 0;
+            font-size: 14px;
+        }
+
+        .analytics-note {
+            color: #555;
+            margin-top: -10px;
+            margin-bottom: 20px;
+        }
+
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 25px;
+        }
+
+        .chart-panel {
+            min-height: 300px;
+        }
+
+        /* SECTIONS */
+
+        .section {
+            background-color: white;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #d6d6d6;
+            overflow-x: auto;
+        }
+
+        .section h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        /* TABLES */
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 720px;
+        }
+
+        th {
+            background-color: #174A7C;
+            color: white;
+            padding: 9px 10px;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 9px 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .student-directory table {
+            min-width: 0;
+            table-layout: fixed;
+        }
+
+        .student-directory th:nth-child(1),
+        .student-directory td:nth-child(1) {
+            width: 32%;
+        }
+
+        .student-directory th:nth-child(2),
+        .student-directory td:nth-child(2) {
+            width: 24%;
+        }
+
+        .student-directory th:nth-child(3),
+        .student-directory td:nth-child(3) {
+            width: 44%;
+        }
+
+        .student-directory td {
+            overflow-wrap: anywhere;
+        }
+
+        .restricted-account-table {
+            min-width: 780px;
+            max-width: 980px;
+            margin: 0 auto;
+            table-layout: fixed;
+        }
+
+        .restricted-account-table th:nth-child(1),
+        .restricted-account-table td:nth-child(1) {
+            width: 20%;
+        }
+
+        .restricted-account-table th:nth-child(2),
+        .restricted-account-table td:nth-child(2) {
+            width: 20%;
+        }
+
+        .restricted-account-table th:nth-child(3),
+        .restricted-account-table td:nth-child(3) {
+            width: 22%;
+        }
+
+        .restricted-account-table th:nth-child(4),
+        .restricted-account-table td:nth-child(4) {
+            width: 12%;
+        }
+
+        .restricted-account-table th:nth-child(5),
+        .restricted-account-table td:nth-child(5) {
+            width: 18%;
+        }
+
+        .restricted-account-table th:nth-child(6),
+        .restricted-account-table td:nth-child(6) {
+            width: 8%;
+        }
+
+        .admin-message-cell {
+            white-space: normal;
+            line-height: 1.4;
+        }
+
+        .banned-account-table {
+            min-width: 620px;
+            max-width: 760px;
+            margin: 0 auto;
+            table-layout: fixed;
+        }
+
+        .banned-account-table th:nth-child(1),
+        .banned-account-table td:nth-child(1) {
+            width: 28%;
+        }
+
+        .banned-account-table th:nth-child(2),
+        .banned-account-table td:nth-child(2) {
+            width: 20%;
+        }
+
+        .banned-account-table th:nth-child(3),
+        .banned-account-table td:nth-child(3) {
+            width: 32%;
+        }
+
+        .banned-account-table th:nth-child(4),
+        .banned-account-table td:nth-child(4) {
+            width: 10%;
+        }
+
+        .banned-account-table th:nth-child(5),
+        .banned-account-table td:nth-child(5) {
+            width: 10%;
+        }
+
+        .banned-account-table .unban-button {
+            padding: 6px 9px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        /* ALERT */
+
+        .alert {
+            color: #b00020;
+            font-weight: bold;
+        }
+
+        /* BUTTON */
+
+        .read-button {
+            background-color: #2F6F9F;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .read-button:hover {
+            background-color: #174A7C;
+        }
+
+        .section-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .print-doc-btn {
+            background-color: #00A859;
+            color: white;
+            text-decoration: none;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+
+        .print-doc-btn:hover {
+            background-color: #008744;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+
+        /* CHART */
+
+        .chart-container {
+            max-width: 650px;
+            margin: 20px auto;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 900px) {
+
+            .cards { grid-template-columns: repeat(2, 1fr); }
+
+            .analytics-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+        @media (max-width: 600px) {
+
+            .cards,
+            .analytics-cards { grid-template-columns: 1fr; }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h1>Nish Institution</h1>
+
+        <p>Administrator Dashboard</p>
+
+    </div>
+
+
+    <!-- NAVIGATION -->
+
+    <div class="nav">
+        <a href="/admin">Dashboard</a>
+        <a href="/reports">Reports</a>
+        <a href="/admin/students/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print Students</a>
+        <a href="/admin/lecturers/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print Lecturers</a>
+        <a href="/admin/cyberbullying-messages/print" target="_blank" style="color: #fca5a5; font-weight: bold;">&#128438; Print Cyberbullying Messages</a>
+        <a href="/admin/report/print" target="_blank" style="color: #68d391; font-weight: bold;">&#128438; Print Formal Report</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+
+    <div class="container">
+
+
+        <!-- WELCOME -->
+
+        <div class="welcome">
+
+            <h2>Welcome, Administrator</h2>
+
+            <p>
+                Monitor student posts and cyberbullying alerts
+                from this administration portal.
+            </p>
+
+        </div>
+
+
+        <!-- GENERAL STATISTICS -->
+
+        <div class="cards">
+
+
+            <div class="card">
+
+                <h2>{{ total_users }}</h2>
+
+                <p>Total Users</p>
+
+            </div>
+
+            <div class="card">
+
+                <h2>{{ total_messages }}</h2>
+
+                <p>Total Student Posts</p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>{{ total_alerts }}</h2>
+
+                <p>Cyberbullying Alerts</p>
+
+            </div>
+
+
+            <div class="card">
+
+                <h2>{{ unread_alerts }}</h2>
+
+                <p>Unread Alerts</p>
+
+            </div>
+
+
+        </div>
+
+        <!-- REGISTERED STUDENTS -->
+
+        <div class="section student-directory">
+            <div class="section-header-row">
+                <h2 style="margin: 0;">Registered Students</h2>
+                <a href="/admin/students/print" target="_blank" class="print-doc-btn">&#128438; Print Student Roster</a>
+            </div>
+            {% if students %}
+            <table>
+                <tr>
+                    <th>Student name</th>
+                    <th>Student ID</th>
+                    <th>Institution email</th>
+                </tr>
+                {% for student in students %}
+                <tr>
+                    <td>{{ student[0] }}</td>
+                    <td>{{ student[1] or "Not provided" }}</td>
+                    <td>{{ student[2] or "Not provided" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No student accounts have been registered yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- REGISTERED LECTURERS -->
+
+        <div class="section student-directory">
+            <div class="section-header-row">
+                <h2 style="margin: 0;">Registered Lecturers</h2>
+                <a href="/admin/lecturers/print" target="_blank" class="print-doc-btn">&#128438; Print Lecturer Roster</a>
+            </div>
+            {% if lecturers %}
+            <table>
+                <tr>
+                    <th>Lecturer name</th>
+                    <th>Lecturer ID</th>
+                    <th>Institution email</th>
+                </tr>
+                {% for lecturer in lecturers %}
+                <tr>
+                    <td>{{ lecturer[0] }}</td>
+                    <td>{{ lecturer[1] or "Not provided" }}</td>
+                    <td>{{ lecturer[2] or "Not provided" }}</td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No lecturer accounts have been registered yet.</p>
+            {% endif %}
+        </div>
+
+        <!-- RESTRICTED ACCOUNTS -->
+
+        <div class="section student-directory">
+            <h2>Temporarily Restricted Accounts</h2>
+            {% if restricted_users %}
+            <table class="restricted-account-table">
+                <tr>
+                    <th>User name</th>
+                    <th>Student ID</th>
+                    <th>Institution email</th>
+                    <th>Status</th>
+                    <th>Admin message</th>
+                    <th>Action</th>
+                </tr>
+                {% for user in restricted_users %}
+                <tr>
+                    <td>{{ user[1] }}</td>
+                    <td>{{ user[2] or "Not provided" }}</td>
+                    <td>{{ user[3] }}</td>
+                    <td>{{ user[4] }}</td>
+                    <td class="admin-message-cell">{{ user[5] or "No administrator message available." }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.remove_restriction', user_id=user[0]) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="read-button">Remove restriction</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No accounts are currently temporarily restricted.</p>
+            {% endif %}
+        </div>
+
+        <!-- BANNED ACCOUNTS -->
+
+        <div class="section student-directory">
+            <h2>Ban Enforcement</h2>
+            {% if banned_users %}
+            <table class="banned-account-table">
+                <tr>
+                    <th>User name</th>
+                    <th>Student ID</th>
+                    <th>Institution email</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+                {% for user in banned_users %}
+                <tr>
+                    <td>{{ user[1] }}</td>
+                    <td>{{ user[2] or "Not provided" }}</td>
+                    <td>{{ user[3] }}</td>
+                    <td>{{ user[4] }}</td>
+                    <td>
+                        <form action="{{ url_for('admin.unban_account', user_id=user[0]) }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="read-button unban-button">Unban</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            {% else %}
+            <p>No accounts are currently banned.</p>
+            {% endif %}
+        </div>
+
+
+        <!-- AI DETECTION ANALYTICS -->
+
+        <h2 class="analytics-title">
+            AI Detection Analytics
+        </h2>
+
+        <p class="analytics-note">
+            Every submitted post is automatically analysed and retained for
+            monitoring, research, and system improvement.
+        </p>
+
+
+        <div class="analytics-cards">
+
+
+            <div class="analytics-card">
+
+                <h2>
+                    {{ cyberbullying_messages }}
+                </h2>
+
+                <p>
+                    Cyberbullying Messages
+                </p>
+
+            </div>
+
+            <div class="analytics-card">
+                <h2>{{ total_reports }}</h2>
+                <p>Student Reports</p>
+            </div>
+
+            <div class="analytics-card">
+                <h2>{{ "%.2f"|format(average_confidence * 100) }}%</h2>
+                <p>Average AI Confidence</p>
+            </div>
+
+
+            <div class="analytics-card">
+
+                <h2>
+                    {{ normal_messages }}
+                </h2>
+
+                <p>
+                    Not Cyberbullying
+                </p>
+
+            </div>
+
+
+            <div class="analytics-card">
+
+                <h2>
+
+                    {% if total_messages > 0 %}
+
+                        {{ "%.2f"|format(
+                            (cyberbullying_messages / total_messages) * 100
+                        ) }}%
+
+                    {% else %}
+
+                        0.00%
+
+                    {% endif %}
+
+                </h2>
+
+                <p>
+                    Cyberbullying Detection Rate
+                </p>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- AI ANALYTICS CHART -->
+
+        <div class="section">
+            <h2>Research and Monitoring Trends</h2>
+            <div class="chart-grid">
+                <div class="chart-container chart-panel">
+                    <h3>Detection Results</h3>
+                    <canvas id="detectionChart"></canvas>
+                </div>
+                <div class="chart-container chart-panel">
+                    <h3>Posts Analysed Over Time</h3>
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- CHART DATA -->
+
+        <div
+            id="analyticsData"
+            data-cyberbullying="{{ cyberbullying_messages }}"
+            data-normal="{{ normal_messages }}"
+            data-dates='{{ daily_activity|map(attribute=0)|list|tojson }}'
+            data-daily-counts='{{ daily_activity|map(attribute=1)|list|tojson }}'
+        ></div>
+
+
+        <!-- CHART LIBRARY -->
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+        <!-- CHART SCRIPT -->
+
+        <script>
+
+            const analyticsData =
+                document.getElementById("analyticsData");
+
+
+            const cyberbullying =
+                Number(analyticsData.dataset.cyberbullying);
+
+
+            const normal =
+                Number(analyticsData.dataset.normal);
+
+
+            const ctx =
+                document.getElementById("detectionChart");
+
+
+            new Chart(ctx, {
+
+                type: "bar",
+
+                data: {
+
+                    labels: [
+                        "Cyberbullying",
+                        "Not Cyberbullying"
+                    ],
+
+                    datasets: [{
+
+                        label: "Number of Messages",
+
+                        data: [cyberbullying, normal],
+                        backgroundColor: ["#2F6F9F", "#A8C4D8"]
+
+                    }]
+
+                },
+
+                options: {
+
+                    responsive: true,
+
+                    scales: {
+
+                        y: {
+
+                            beginAtZero: true,
+
+                            ticks: {
+
+                                stepSize: 1
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            });
+
+            const dailyDates = JSON.parse(analyticsData.dataset.dates);
+            const dailyCounts = JSON.parse(analyticsData.dataset.dailyCounts);
+            const activityCtx = document.getElementById("activityChart");
+
+            new Chart(activityCtx, {
+                type: "line",
+                data: {
+                    labels: dailyDates,
+                    datasets: [{
+                        label: "Posts analysed",
+                        data: dailyCounts,
+                        borderColor: "#2F6F9F",
+                        backgroundColor: "rgba(47, 111, 159, 0.12)",
+                        fill: true,
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+
+        </script>
+
+
+        <!-- RECENT STUDENT POSTS -->
+
+        <div class="section">
+
+            <h2>
+                Recent Student Posts
+            </h2>
+
+
+            {% if recent_messages %}
+
+            <table>
+
+                <tr>
+
+                    <th>Message ID</th>
+
+                    <th>Student</th>
+
+                    <th>Message</th>
+
+                    <th>Detection Result</th>
+
+                    <th>Confidence</th>
+
+                    <th>Status</th>
+                    <th>Admin action</th>
+
+                </tr>
+
+
+                {% for message in recent_messages %}
+
+                <tr>
+
+                    <td>
+                        {{ message[0] }}
+                    </td>
+
+                    <td>
+                        {{ message[1] }}
+                    </td>
+
+                    <td>
+                        {{ message[2] }}
+                    </td>
+
+                    <td>
+
+                        {% if message[3] == "Cyberbullying" %}
+
+                        <span class="alert">
+                            {{ message[3] }}
+                        </span>
+
+                        {% else %}
+
+                        {{ message[3] }}
+
+                        {% endif %}
+
+                    </td>
+
+                    <td>
+                        {{ "%.2f"|format(message[4] * 100) }}%
+                    </td>
+
+                    <td>
+                        {{ message[5] }}
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.delete_message') }}" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="message_id" value="{{ message[0] }}">
+                            <input name="reason" maxlength="1000" placeholder="Reason" required>
+                            <button class="read-button" type="submit" onclick="return confirm('Delete this message permanently?')">Delete</button>
+                        </form>
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </table>
+
+
+            {% else %}
+
+            <p>
+                No student posts have been submitted yet.
+            </p>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- CYBERBULLYING ALERTS -->
+
+        <div class="section">
+            <div class="section-header-row">
+                <h2 style="margin: 0;">Cyberbullying Alerts</h2>
+                <a href="/admin/cyberbullying-messages/print" target="_blank" class="print-doc-btn" style="background-color: #dc2626;">&#128438; Print Cyberbullying Messages Document</a>
+            </div>
+
+            <div class="section">
+                <h3>Pending Review</h3>
+                {% if pending_alerts %}
+                <table>
+                    <tr>
+                        <th>Alert ID</th>
+                        <th>Message ID</th>
+                        <th>Student</th>
+                        <th>Alert Type</th>
+                        <th>Alert Message</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    {% for alert in pending_alerts %}
+                    <tr>
+                        <td>{{ alert[0] }}</td>
+                        <td>{{ alert[1] }}</td>
+                        <td>{{ alert[2] }}</td>
+                        <td>
+                            {% if alert[3] == "Cyberbullying" %}
+                            <span class="alert">{{ alert[3] }}</span>
+                            {% else %}
+                            {{ alert[3] }}
+                            {% endif %}
+                        </td>
+                        <td>{{ alert[4] }}</td>
+                        <td>{{ alert[5] }}</td>
+                        <td class="status">{{ alert[6] }}</td>
+                        <td>
+                            <form
+                                action="{{ url_for('admin.send_admin_decision', alert_id=alert[0]) }}"
+                                method="POST"
+                                class="admin-decision-form"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <label class="sr-only" for="decision-{{ alert[0] }}">Decision</label>
+                                <select id="decision-{{ alert[0] }}" name="action" required>
+                                    <option value="notify_only">Notify student only</option>
+                                    <option value="warning">Issue formal warning</option>
+                                    <option value="temporary_restriction">Temporary restriction</option>
+                                    <option value="account_ban">Permanent account ban</option>
+                                </select>
+                                <button type="submit" class="read-button">Approve and enforce</button>
+                            </form>
+                            <form
+                                action="{{ url_for('admin.mark_alert_read', alert_id=alert[0]) }}"
+                                method="POST"
+                            >
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="read-button">Mark as read</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>No alerts require review.</p>
+                {% endif %}
+            </div>
+
+            <div class="section">
+                <h3>Reviewed Alerts</h3>
+                {% if reviewed_alerts %}
+                <table>
+                    <tr>
+                        <th>Alert ID</th>
+                        <th>Message ID</th>
+                        <th>Student</th>
+                        <th>Alert Type</th>
+                        <th>Alert Message</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                    {% for alert in reviewed_alerts %}
+                    <tr>
+                        <td>{{ alert[0] }}</td>
+                        <td>{{ alert[1] }}</td>
+                        <td>{{ alert[2] }}</td>
+                        <td>
+                            {% if alert[3] == "Cyberbullying" %}
+                            <span class="alert">{{ alert[3] }}</span>
+                            {% else %}
+                            {{ alert[3] }}
+                            {% endif %}
+                        </td>
+                        <td>{{ alert[4] }}</td>
+                        <td>{{ alert[5] }}</td>
+                        <td class="status">{{ alert[6] }}</td>
+                        <td>Reviewed</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% else %}
+                <p>No alerts have been reviewed.</p>
+                {% endif %}
+            </div>
+        </div>
+
+
+    </div>
+
+
+</body>
+
+</html>

@@ -1,0 +1,10 @@
+.env
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.log
+*.db
+cyberbullying.db
+.pytest_cache/
+.vscode/

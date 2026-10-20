@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Student Portal - Nish Institution</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            line-height: 1.5;
+            color: #222;
+            background: #f5f5f5;
+        }
+
+        .site-header {
+            background: #174A7C;
+            color: #fff;
+        }
+
+        .header-content,
+        main {
+            width: min(940px, 92%);
+            margin: 0 auto;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 0;
+        }
+
+        .site-title {
+            margin: 0;
+            font-size: 22px;
+            font-weight: normal;
+        }
+
+        .nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav a {
+            padding: 7px 12px;
+            color: #fff;
+            text-decoration: none;
+            border: 1px solid #888;
+            border-radius: 3px;
+        }
+
+        .nav a:hover {
+            background: #0F355A;
+        }
+
+        main {
+            padding: 28px 0 45px;
+        }
+
+        .intro,
+        .panel,
+        .post {
+            background: #fff;
+            border: 1px solid #d6d6d6;
+        }
+
+        .intro,
+        .panel {
+            padding: 22px;
+            margin-bottom: 20px;
+        }
+
+        h1,
+        h2,
+        h3 {
+            margin-top: 0;
+        }
+
+        .intro h1 {
+            margin-bottom: 8px;
+            font-size: 25px;
+        }
+
+        .intro p {
+            max-width: 700px;
+            margin: 6px 0;
+        }
+
+        .help-text {
+            color: #555;
+            font-size: 14px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 7px;
+            font-weight: bold;
+        }
+
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            padding: 11px;
+            font: inherit;
+            border: 1px solid #aaa;
+            border-radius: 3px;
+        }
+
+        textarea {
+            min-height: 130px;
+            resize: vertical;
+        }
+
+        button {
+            margin-top: 12px;
+            padding: 9px 16px;
+            font: inherit;
+            color: #fff;
+            background: #174A7C;
+            border: 0;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2F6F9F;
+        }
+
+        .post {
+            padding: 18px 0;
+            border-width: 0 0 1px;
+        }
+
+        .post:last-child {
+            border-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .post-message {
+            margin: 0 0 12px;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .post-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            margin: 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .post-details strong {
+            color: #222;
+        }
+
+        .report-box {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid #eee;
+        }
+
+        .report-box label {
+            font-size: 14px;
+        }
+
+        .report-button {
+            background: #2F6F9F;
+        }
+        .post-actions { float: right; position: relative; }
+        .post-actions summary { cursor: pointer; padding: 2px 7px; color: #174A7C; font-size: 20px; list-style: none; }
+        .post-actions summary::-webkit-details-marker { display: none; }
+        .post-actions menu { position: absolute; right: 0; z-index: 2; min-width: 140px; padding: 8px; margin: 0; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 6px #0002; }
+        .post-actions button { width: 100%; margin: 2px 0; padding: 6px 8px; text-align: left; }
+        .post-actions .delete-button { background: #9b2c2c; }
+
+        .empty-state {
+            margin: 0;
+            color: #555;
+        }
+
+        .reply-list {
+            margin: 14px 0 0;
+            padding-left: 18px;
+            border-left: 3px solid #dbe7f0;
+        }
+
+        .reply {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .reply:last-child {
+            border-bottom: 0;
+        }
+
+        .reply p {
+            margin: 3px 0;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .reply-form {
+            margin-top: 12px;
+        }
+
+        .reply-form textarea {
+            min-height: 72px;
+        }
+
+        .reply-form button {
+            margin-top: 7px;
+            padding: 7px 12px;
+        }
+
+        @media (max-width: 600px) {
+            .header-content {
+                display: block;
+            }
+
+            .nav {
+                margin-top: 12px;
+            }
+
+            .nav a {
+                display: inline-block;
+            }
+
+            main {
+                width: 94%;
+                padding-top: 18px;
+            }
+
+            .intro,
+            .panel {
+                padding: 17px;
+            }
+
+        }
+    </style>
+</head>
+
+<body>
+    <header class="site-header">
+        <div class="header-content">
+            <p class="site-title">Nish Institution · Student Portal</p>
+            <nav class="nav" aria-label="Student navigation">
+                <a href="/student-dashboard">My Portal</a>
+                <a href="/student/report/print" target="_blank" style="background: #00A859; border-color: #00A859; font-weight: bold;">&#128438; Print Activity Record</a>
+                <a href="/blog">Open Blog</a>
+                <a href="/student-logout">Log out</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <section class="intro">
+            <h1>Welcome, {{ student_name }}</h1>
+            <p>Use this portal to send direct messages to students and lecturers.</p>
+            <p class="help-text">
+                Submitted messages are automatically analysed by the cyberbullying
+                detection system.
+            </p>
+        </section>
+
+        <section class="panel" aria-labelledby="message-heading">
+            <h2 id="message-heading">Send a direct message</h2>
+            <p class="help-text">Search for a student or lecturer using their institution email.</p>
+            <form action="/message-send" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="student-recipient">Recipient institution email</label>
+                <input id="student-recipient" name="recipient_email" type="email" list="student-recipient-results" autocomplete="off" required>
+                <datalist id="student-recipient-results"></datalist>
+                <label for="message">Message</label>
+                <textarea
+                    id="message"
+                    name="message"
+                    placeholder="Write your message here..."
+                    maxlength="2000"
+                    required></textarea>
+                <button type="submit">Send message</button>
+            </form>
+        </section>
+
+        <section class="panel">
+            <h2>Notifications &amp; Administrative Decisions</h2>
+            {% if notifications %}
+                {% for notification in notifications %}
+                    {% if "OFFICIAL ADMINISTRATIVE DECISION" in notification[1] or "DISCIPLINARY" in notification[1] %}
+                        <div style="background: #fff5f5; border: 1px solid #feb2b2; border-left: 5px solid #e53e3e; padding: 14px 16px; margin-bottom: 12px; border-radius: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                <strong style="color: #9b2c2c; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">&#9888; Official Disciplinary Notice</strong>
+                                <span style="font-size: 12px; color: #718096;">{{ notification[2] }}</span>
+                            </div>
+                            <pre style="white-space: pre-wrap; font-family: inherit; font-size: 13px; color: #2d3748; margin: 0 0 10px; background: #fff; padding: 10px; border: 1px solid #edf2f7; border-radius: 3px;">{{ notification[1] }}</pre>
+                            <a href="/student/notice/{{ notification[0] }}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: #174A7C; color: #fff; text-decoration: none; border-radius: 3px; font-weight: bold; font-size: 13px;">
+                                &#128196; View &amp; Print Official Document Letter
+                            </a>
+                        </div>
+                    {% else %}
+                        <div style="padding: 10px 0; border-bottom: 1px solid #edf2f7;">
+                            <strong style="color: #4a5568; font-size: 12px;">{{ notification[2] }}</strong>
+                            <p style="margin: 4px 0 0; color: #2d3748;">{{ notification[1] }}</p>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">You have no notifications.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <h2>Messages received</h2>
+            {% if inbox_messages %}
+                {% for message in inbox_messages %}
+                    <article class="post">
+                        <details class="post-actions">
+                            <summary aria-label="Message actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('student.delete_inbox_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Remove this message from your inbox?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
+                        <p class="post-message">{{ message[3] }}</p>
+                        <p class="post-details">
+                            <span><strong>From:</strong> {{ message[1] }} ({{ message[2] }})</span>
+                            <span><strong>Received:</strong> {{ message[6] }}</span>
+                            <span><strong>AI:</strong> {{ message[4] }} · {{ "%.2f"|format(message[5] * 100) }}%</span>
+                        </p>
+                        {% if message[4].startswith("Cyberbullying") %}
+                            <p class="help-text"><strong>Notice:</strong> This message was identified as possible cyberbullying and has been reported to the administrator.</p>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">You have no direct messages yet.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <h2>Messages sent</h2>
+            {% if sent_messages %}
+                {% for message in sent_messages %}
+                    <article class="post">
+                        <details class="post-actions">
+                            <summary aria-label="Message actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('student.delete_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this message?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
+                        <p class="post-message">{{ message[3] }}</p>
+                        <p class="post-details">
+                            <span><strong>To:</strong> {{ message[1] }} ({{ message[2] }})</span>
+                            <span><strong>Sent:</strong> {{ message[6] }}</span>
+                            <span><strong>AI:</strong> {{ message[4] }} · {{ "%.2f"|format(message[5] * 100) }}%</span>
+                        </p>
+                        {% if message[4].startswith("Cyberbullying") %}
+                            <p class="help-text"><strong>Notice:</strong> This message was identified as possible cyberbullying and has been reported to the administrator.</p>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty-state">You have not sent any direct messages.</p>
+            {% endif %}
+        </section>
+
+    </main>
+    <script>
+        const studentRecipient = document.getElementById("student-recipient");
+        const studentResults = document.getElementById("student-recipient-results");
+        studentRecipient.addEventListener("input", async () => {
+            if (studentRecipient.value.length < 2) return;
+            const response = await fetch("/message-recipients?q=" + encodeURIComponent(studentRecipient.value));
+            if (!response.ok) return;
+            const data = await response.json();
+            studentResults.replaceChildren(...data.recipients.map((recipient) => {
+                const option = document.createElement("option");
+                option.value = recipient.email;
+                option.label = recipient.name + " (" + recipient.role + ")";
+                return option;
+            }));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nish Institution</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #222;
+            background: #f5f5f5;
+        }
+        header {
+            padding: 16px 20px 28px;
+            color: #fff;
+            background: #174A7C;
+        }
+        .header-content {
+            width: 100%;
+            padding: 0 28px;
+        }
+        .topbar-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            justify-content: flex-end;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .topbar-nav a {
+            color: #fff;
+            text-decoration: none;
+            padding: 5px 8px;
+            font-size: 14px;
+        }
+        .topbar-nav a:hover {
+            text-decoration: underline;
+        }
+        .student-login-button {
+            padding: 6px 10px !important;
+            color: #174A7C !important;
+            background: #fff;
+            border-radius: 3px;
+            text-decoration: none !important;
+            font-weight: bold;
+        }
+        .student-login-button:hover {
+            background: #e8f0f6;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 34px;
+            font-weight: bold;
+            letter-spacing: .3px;
+        }
+        header p {
+            max-width: 760px;
+            margin: 8px 0 0;
+            font-size: 17px;
+        }
+        main {
+            width: 100%;
+            padding: 0 28px;
+            margin: 30px 0 45px;
+        }
+        .panel {
+            padding: 25px;
+            margin-bottom: 20px;
+            background: #fff;
+            border: 1px solid #d6d6d6;
+        }
+        .intro {
+            text-align: center;
+        }
+        .intro h2,
+        .panel h2 {
+            margin-top: 0;
+            color: #174A7C;
+        }
+        .intro p {
+            max-width: 800px;
+            margin: 8px auto;
+        }
+        .section-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        .step,
+        .feature {
+            padding: 18px;
+            border: 1px solid #d6d6d6;
+        }
+        .step h3,
+        .feature h3 {
+            margin-top: 0;
+            color: #174A7C;
+            font-size: 18px;
+        }
+        .step p,
+        .feature p {
+            margin-bottom: 0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-top: 18px;
+        }
+        .stat {
+            padding: 17px;
+            text-align: center;
+            border: 1px solid #d6d6d6;
+        }
+        .stat strong {
+            display: block;
+            color: #174A7C;
+            font-size: 25px;
+        }
+        .stat span {
+            color: #555;
+            font-size: 14px;
+        }
+        .student-panel {
+            text-align: center;
+        }
+        .link {
+            display: inline-block;
+            padding: 9px 16px;
+            color: #fff;
+            background: #174A7C;
+            border-radius: 3px;
+            text-decoration: none;
+        }
+        .link:hover {
+            background: #2F6F9F;
+        }
+        .notice {
+            color: #555;
+            font-size: 14px;
+        }
+        footer {
+            padding: 20px;
+            color: #555;
+            text-align: center;
+            border-top: 1px solid #d6d6d6;
+        }
+        footer a {
+            color: #174A7C;
+        }
+        @media (max-width: 750px) {
+            .header-content,
+            main {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+
+            .section-grid,
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 480px) {
+            header { padding: 14px 16px 22px; }
+            header h1 { font-size: 28px; }
+            header p { margin-top: 5px; font-size: 14px; line-height: 1.45; }
+            .topbar-nav { gap: 8px; margin-top: 8px; }
+            .topbar-nav a { padding: 4px 6px; font-size: 13px; }
+            .student-login-button { padding: 5px 8px !important; }
+            main { padding: 0 14px; margin-top: 18px; }
+            .section-grid,
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            .panel { padding: 15px 14px; margin-bottom: 14px; }
+            .panel h2 { font-size: 19px; }
+            .section-grid { gap: 10px; }
+            .step,
+            .feature { padding: 13px; }
+            .step h3,
+            .feature h3 { font-size: 16px; }
+            .stats { gap: 9px; margin-top: 12px; }
+            .stat { padding: 12px 9px; }
+            .stat strong { font-size: 22px; }
+            footer { padding: 16px; font-size: 14px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Nish Institution</h1>
+            <nav class="topbar-nav" aria-label="Public navigation">
+                <a href="/donate" style="color: #72e4a8; font-weight: bold;">Support via M-Pesa</a>
+                <a class="student-login-button" href="/student-login">Student Login</a>
+                <a href="/lecturer-login">Lecturer Login</a>
+            </nav>
+            <p>Cyberbullying Detection and Prevention System</p>
+            <p>A student-focused platform for identifying, reporting, and reviewing harmful online messages.</p>
+        </div>
+    </header>
+
+    <main>
+        <section class="panel intro">
+            <h2>About the system</h2>
+            <p>
+                This system helps the institution identify possible cyberbullying
+                in messages submitted through the student portal. Each message is
+                analysed automatically and the result is saved so that authorised
+                staff can review patterns, alerts, and reports.
+            </p>
+            <p>
+                The system supports early awareness and responsible intervention.
+                It assists staff with reviewing messages, but an AI result should
+                not be treated as the only decision about a student.
+            </p>
+        </section>
+
+        <section class="panel">
+            <h2>Current system summary</h2>
+            <p>These figures represent messages that have already been submitted and analysed.</p>
+            <div class="stats">
+                <div class="stat">
+                    <strong>{{ total_messages }}</strong>
+                    <span>Messages analysed</span>
+                </div>
+                <div class="stat">
+                    <strong>{{ cyberbullying_count }}</strong>
+                    <span>Possible cyberbullying</span>
+                </div>
+                <div class="stat">
+                    <strong>{{ not_cyberbullying_count }}</strong>
+                    <span>Not cyberbullying</span>
+                </div>
+                <div class="stat">
+                    <strong>{{ detection_rate }}%</strong>
+                    <span>Detection rate</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>How it works</h2>
+            <div class="section-grid">
+                <article class="step">
+                    <h3>1. Submit a message</h3>
+                    <p>A student signs in and submits a message through the student portal.</p>
+                </article>
+                <article class="step">
+                    <h3>2. Automatic analysis</h3>
+                    <p>The detection model checks the message and returns a classification with a confidence score.</p>
+                </article>
+                <article class="step">
+                    <h3>3. Review and report</h3>
+                    <p>Students can report a concern, while authorised administrators review alerts and reports.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel">
+            <h2>What the system provides</h2>
+            <div class="section-grid">
+                <article class="feature">
+                    <h3>Message detection</h3>
+                    <p>Flags messages that may contain cyberbullying-related language for further attention.</p>
+                </article>
+                <article class="feature">
+                    <h3>Student history</h3>
+                    <p>Students can view their recent submissions, results, confidence scores, and dates.</p>
+                </article>
+                <article class="feature">
+                    <h3>Administrator review</h3>
+                    <p>Administrators can monitor activity, review alerts, manage reports, and study trends.</p>
+                </article>
+            </div>
+        </section>
+
+        <section class="panel" style="background: linear-gradient(135deg, #f0fdf4 0%, #e6fffa 100%); border: 1px solid #bbf7d0; text-align: center;">
+            <h2 style="color: #166534;">Support Our Platform</h2>
+            <p style="max-width: 650px; margin: 0 auto 16px; color: #14532d;">
+                Help us keep our cyberbullying detection system running and expand support tools for students. 
+                Instant contributions are accepted securely via M-Pesa.
+            </p>
+            <a class="link" href="/donate" style="background: #00A859; font-weight: bold; padding: 10px 22px;">Donate via M-Pesa Prompt</a>
+        </section>
+
+        <section class="panel student-panel">
+            <h2>For students</h2>
+            <p>
+                Sign in to submit a message, see the analysis result, review your
+                recent posts, and report a message that needs attention.
+            </p>
+            <a class="link" href="/student-login">Go to student login</a>
+            <p class="notice">
+                If you are in immediate danger or receive a serious threat,
+                contact a trusted adult or the institution directly.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <p>Nish Institution</p>
+        <a href="/donate">Donate via M-Pesa</a>
+        <span> · </span>
+        <a href="/lecturer-signup">Lecturer signup</a>
+        <span> · </span>
+        <a href="/admin/login">Administrator login</a>
+    </footer>
+</body>
+</html>

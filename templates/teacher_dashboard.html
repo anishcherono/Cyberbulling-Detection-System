@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lecturer Workspace - Nish Institution</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; color: #222; background: #f5f5f5; }
+        header { color: #fff; background: #174A7C; }
+        .header-content, main { width: min(940px, 92%); margin: 0 auto; }
+        .header-content { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+        .title { margin: 0; font-size: 22px; font-weight: normal; }
+        nav { display: flex; gap: 8px; }
+        nav a { padding: 7px 12px; color: #fff; text-decoration: none; border: 1px solid #b9d0e1; border-radius: 3px; }
+        nav a:hover { background: #0F355A; }
+        main { padding: 28px 0 45px; }
+        .panel { padding: 22px; margin-bottom: 20px; background: #fff; border: 1px solid #d6d6d6; }
+        h1, h2 { margin-top: 0; }
+        h2 { color: #174A7C; }
+        .help { color: #555; font-size: 14px; }
+        label { display: block; margin: 12px 0 6px; font-weight: bold; }
+        input, textarea { width: 100%; padding: 10px; font: inherit; border: 1px solid #aaa; border-radius: 3px; }
+        textarea { min-height: 130px; resize: vertical; }
+        button { margin-top: 12px; padding: 9px 15px; color: #fff; background: #174A7C; border: 0; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #2F6F9F; }
+        .announcement { padding: 16px 0; border-bottom: 1px solid #ddd; }
+        .announcement:last-child { border-bottom: 0; }
+        .announcement h3 { margin: 0 0 5px; color: #174A7C; }
+        .meta { color: #555; font-size: 13px; }
+        .empty { color: #555; }
+        .discussion { padding: 14px 0; border-bottom: 1px solid #ddd; }
+        .discussion:last-child { border-bottom: 0; }
+        .discussion p { white-space: pre-wrap; overflow-wrap: anywhere; }
+        .reply { margin: 10px 0 0 18px; padding-left: 12px; border-left: 3px solid #dbe7f0; }
+        .reply-form textarea { min-height: 70px; }
+        .post-actions { float: right; position: relative; }
+        .post-actions summary { cursor: pointer; padding: 2px 7px; color: #174A7C; font-size: 20px; list-style: none; }
+        .post-actions summary::-webkit-details-marker { display: none; }
+        .post-actions menu { position: absolute; right: 0; z-index: 2; min-width: 140px; padding: 8px; margin: 0; background: #fff; border: 1px solid #ccc; box-shadow: 0 2px 6px #0002; }
+        .post-actions button { width: 100%; margin: 2px 0; padding: 6px 8px; text-align: left; }
+        .post-actions .delete-button { background: #9b2c2c; }
+        @media (max-width: 600px) {
+            .header-content { display: block; }
+            nav { margin-top: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <p class="title">Nish Institution · Lecturer Workspace</p>
+            <nav aria-label="Lecturer navigation">
+                <a href="/lecturer-dashboard">Workspace</a>
+                <a href="/lecturer/report/print" target="_blank" style="background: #00A859; border-color: #00A859; font-weight: bold;">&#128438; Print Monitoring Report</a>
+                <a href="/blog">Open Blog</a>
+                <a href="/lecturer-logout">Log out</a>
+            </nav>
+        </div>
+    </header>
+    <main>
+        <section class="panel">
+            <h1>Welcome, {{ teacher_name }}</h1>
+            <p class="help">Create announcements and share educational information with students.</p>
+        </section>
+        <section class="panel">
+            <h2>Publish an announcement</h2>
+            <form action="/lecturer-announcement" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="title">Title</label>
+                <input id="title" name="title" maxlength="150" required>
+                <label for="content">Announcement</label>
+                <textarea id="content" name="message" maxlength="2000" required></textarea>
+                <button type="submit">Publish announcement</button>
+            </form>
+            <p class="help">Announcements are checked automatically before publication.</p>
+        </section>
+        <section class="panel">
+            <h2>Send a direct message</h2>
+            <p class="help">Search for a student or lecturer using their institution email.</p>
+            <form action="/message-send" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <label for="teacher-recipient">Recipient institution email</label>
+                <input id="teacher-recipient" name="recipient_email" type="email" list="teacher-recipient-results" autocomplete="off" required>
+                <datalist id="teacher-recipient-results"></datalist>
+                <label for="direct-message">Message</label>
+                <textarea id="direct-message" name="message" maxlength="2000" required></textarea>
+                <button type="submit">Send message</button>
+            </form>
+        </section>
+        <section class="panel">
+            <h2>Notifications</h2>
+            {% if notifications %}
+                {% for notification in notifications %}
+                    <p class="help"><strong>{{ notification[2] }}</strong><br>{{ notification[1] }}</p>
+                {% endfor %}
+            {% else %}
+                <p class="empty">You have no notifications.</p>
+            {% endif %}
+        </section>
+
+        <section class="panel">
+            <h2>Messages received</h2>
+            {% if inbox_messages %}
+                {% for message in inbox_messages %}
+                    <article class="discussion">
+                        <details class="post-actions">
+                            <summary aria-label="Message actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('teacher.delete_inbox_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Remove this message from your inbox?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
+                        <p>{{ message[3] }}</p>
+                        <p class="help">From {{ message[1] }} ({{ message[2] }}) · {{ message[6] }} · AI: {{ message[4] }} ({{ "%.2f"|format(message[5] * 100) }}%)</p>
+                        {% if message[4].startswith("Cyberbullying") %}
+                            <p class="help"><strong>Notice:</strong> This message was identified as possible cyberbullying and has been reported to the administrator.</p>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty">You have no direct messages yet.</p>
+            {% endif %}
+        </section>
+        <section class="panel">
+            <h2>Messages sent</h2>
+            {% if sent_messages %}
+                {% for message in sent_messages %}
+                    <article class="discussion">
+                        <details class="post-actions">
+                            <summary aria-label="Message actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('teacher.delete_message') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="message_id" value="{{ message[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this message?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
+                        <p>{{ message[3] }}</p>
+                        <p class="help">To {{ message[1] }} ({{ message[2] }}) · {{ message[6] }} · AI: {{ message[4] }} ({{ "%.2f"|format(message[5] * 100) }}%)</p>
+                        {% if message[4].startswith("Cyberbullying") %}
+                            <p class="help"><strong>Notice:</strong> This message was identified as possible cyberbullying and has been reported to the administrator.</p>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty">You have not sent any direct messages.</p>
+            {% endif %}
+        </section>
+        <section class="panel">
+            <h2>My recent announcements</h2>
+            {% if announcements %}
+                {% for announcement in announcements %}
+                    <article class="announcement">
+                        <details class="post-actions">
+                            <summary aria-label="Announcement actions">...</summary>
+                            <menu>
+                                <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                                    <button type="submit">Report</button>
+                                </form>
+                                <form action="{{ url_for('teacher.delete_announcement') }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="announcement_id" value="{{ announcement[0] }}">
+                                    <button class="delete-button" type="submit" onclick="return confirm('Delete this announcement?')">Delete</button>
+                                </form>
+                            </menu>
+                        </details>
+                        <h3>{{ announcement[1] }}</h3>
+                        <p>{{ announcement[2] }}</p>
+                        <p class="meta">{{ announcement[6] }} · Created {{ announcement[5] }} · Detection: {{ announcement[3] }} · Confidence: {{ "%.2f"|format(announcement[4] * 100) }}%</p>
+                        {% for reply in announcement_replies if reply[0] == announcement[0] %}
+                            <div class="reply">
+                                <details class="post-actions">
+                                    <summary aria-label="Reply actions">...</summary>
+                                    <menu>
+                                        <form action="{{ url_for('discussion.report_content') }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="reply_id" value="{{ reply[6] }}">
+                                            <button type="submit">Report</button>
+                                        </form>
+                                        {% if reply[7] == session.get("teacher_user_id") %}
+                                        <form action="{{ url_for('discussion.delete_discussion_item') }}" method="POST">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="reply_id" value="{{ reply[6] }}">
+                                            <button class="delete-button" type="submit" onclick="return confirm('Delete this reply?')">Delete</button>
+                                        </form>
+                                        {% endif %}
+                                    </menu>
+                                </details>
+                                <p><strong>{{ reply[1] }}</strong> ({{ reply[2] }}) · {{ reply[4] }}</p>
+                                <p>{{ reply[3] }}</p>
+                            </div>
+                        {% else %}
+                            <p class="help">No replies yet.</p>
+                        {% endfor %}
+                    </article>
+                {% endfor %}
+            {% else %}
+                <p class="empty">You have not published any announcements yet.</p>
+            {% endif %}
+        </section>
+    </main>
+    <script>
+        const teacherRecipient = document.getElementById("teacher-recipient");
+        const teacherResults = document.getElementById("teacher-recipient-results");
+        teacherRecipient.addEventListener("input", async () => {
+            if (teacherRecipient.value.length < 2) return;
+            const response = await fetch("/message-recipients?q=" + encodeURIComponent(teacherRecipient.value));
+            if (!response.ok) return;
+            const data = await response.json();
+            teacherResults.replaceChildren(...data.recipients.map((recipient) => {
+                const option = document.createElement("option");
+                option.value = recipient.email;
+                option.label = recipient.name + " (" + recipient.role + ")";
+                return option;
+            }));
+        });
+    </script>
+</body>
+</html>

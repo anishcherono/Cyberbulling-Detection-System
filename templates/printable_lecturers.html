@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ report_title }} - Nish Institution</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Times New Roman", Times, Georgia, serif;
+            color: #111;
+            background: #e9ecef;
+            line-height: 1.5;
+        }
+
+        /* Top Action Bar (hidden when printing) */
+        .no-print-toolbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: #174A7C;
+            color: #fff;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            font-family: Arial, sans-serif;
+        }
+        .toolbar-info {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-print {
+            background: #00A859;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.2s;
+        }
+        .btn-print:hover {
+            background: #008744;
+        }
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.4);
+            padding: 7px 14px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .btn-back:hover {
+            background: rgba(255,255,255,0.25);
+        }
+
+        /* Formal Document Sheet Container */
+        .document-container {
+            width: 100%;
+            max-width: 900px;
+            margin: 30px auto 60px;
+            background: #fff;
+            padding: 55px 65px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            border: 1px solid #dcdcdc;
+            position: relative;
+        }
+
+        /* Formal Letterhead Header */
+        .letterhead {
+            border-bottom: 3px double #174A7C;
+            padding-bottom: 18px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .letterhead-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+        .crest-svg {
+            width: 65px;
+            height: 65px;
+            fill: #174A7C;
+        }
+        .inst-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: bold;
+            letter-spacing: 0.8px;
+            color: #174A7C;
+            text-transform: uppercase;
+        }
+        .inst-dept {
+            margin: 2px 0 0;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #444;
+            font-weight: 600;
+        }
+        .inst-contact {
+            margin: 3px 0 0;
+            font-size: 12px;
+            color: #666;
+            font-family: Arial, sans-serif;
+        }
+        .classification-badge {
+            font-family: Arial, sans-serif;
+            border: 2px solid #174A7C;
+            color: #174A7C;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            border-radius: 2px;
+            text-align: center;
+        }
+
+        /* Document Subject & Metadata Block */
+        .document-meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            background: #fbfbfb;
+            border: 1px solid #e2e8f0;
+            padding: 14px 18px;
+            margin-bottom: 25px;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+        }
+        .meta-item {
+            margin: 2px 0;
+        }
+        .meta-label {
+            font-weight: bold;
+            color: #4a5568;
+            display: inline-block;
+            width: 140px;
+        }
+        .meta-val {
+            color: #1a202c;
+        }
+
+        .document-heading {
+            text-align: center;
+            margin: 0 0 20px;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #111;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+        }
+
+        /* Executive Metrics Summary */
+        .summary-box {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 28px;
+            font-family: Arial, sans-serif;
+        }
+        .summary-card {
+            border: 1px solid #cbd5e1;
+            background: #f8fafc;
+            padding: 12px;
+            text-align: center;
+        }
+        .summary-card .number {
+            font-size: 22px;
+            font-weight: bold;
+            color: #174A7C;
+            margin-bottom: 2px;
+        }
+        .summary-card .label {
+            font-size: 11px;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        /* Section Titles */
+        .section-header {
+            font-size: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            border-bottom: 1px solid #333;
+            padding-bottom: 4px;
+            margin: 25px 0 12px;
+            color: #174A7C;
+            letter-spacing: 0.3px;
+        }
+
+        /* Formal Data Table */
+        table.formal-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            margin-bottom: 25px;
+        }
+        table.formal-table th,
+        table.formal-table td {
+            border: 1px solid #94a3b8;
+            padding: 8px 10px;
+            vertical-align: top;
+            text-align: left;
+        }
+        table.formal-table th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.3px;
+            font-family: Arial, sans-serif;
+        }
+        .badge {
+            display: inline-block;
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 2px 7px;
+            border-radius: 3px;
+        }
+        .badge-active {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+
+        /* Formal Attestation & Sign-off Block */
+        .signoff-section {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #cbd5e1;
+            page-break-inside: avoid;
+        }
+        .attestation-statement {
+            font-style: italic;
+            font-size: 12.5px;
+            color: #333;
+            margin-bottom: 30px;
+            text-align: justify;
+        }
+        .signatures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 30px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        .signature-box {
+            padding-top: 35px;
+            border-top: 1px solid #000;
+        }
+        .signature-title {
+            font-weight: bold;
+            color: #111;
+        }
+        .signature-sub {
+            color: #555;
+            margin-top: 2px;
+        }
+
+        /* Institutional Stamp Box */
+        .stamp-container {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 25px;
+        }
+        .official-stamp {
+            border: 2px dashed #94a3b8;
+            padding: 16px 24px;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            color: #64748b;
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            width: 200px;
+        }
+
+        /* Formal Legal Footer */
+        .document-footer {
+            margin-top: 35px;
+            padding-top: 12px;
+            border-top: 1px solid #000;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #555;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* Print Media Stylesheet */
+        @media print {
+            body {
+                background: #fff !important;
+                color: #000 !important;
+            }
+            .no-print-toolbar {
+                display: none !important;
+            }
+            .document-container {
+                max-width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 15mm 18mm 15mm 18mm;
+            }
+            table.formal-table tr {
+                page-break-inside: avoid;
+            }
+            .signoff-section {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Action Bar (Hidden when Printing) -->
+    <div class="no-print-toolbar">
+        <div class="toolbar-info">
+            <strong>Formal Document Viewer</strong> &bull; {{ report_title }}
+        </div>
+        <div class="toolbar-actions">
+            <button type="button" class="btn-print" onclick="window.print();">
+                <span>&#128438;</span> Print Document / Save as PDF
+            </button>
+            <a href="{{ back_url or '/admin' }}" class="btn-back">&larr; Back to Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Official Document Sheet -->
+    <div class="document-container">
+        <!-- Letterhead -->
+        <header class="letterhead">
+            <div class="letterhead-left">
+                <!-- Academic Crest SVG -->
+                <svg class="crest-svg" viewBox="0 0 24 24">
+                    <path d="M12 2L1 7l11 5 9-4.09V17h2V7L12 2zm0 8.82L4.24 7 12 3.47 19.76 7 12 10.82zM5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82z"/>
+                </svg>
+                <div>
+                    <h1 class="inst-title">Nish Institution</h1>
+                    <div class="inst-dept">Directorate of Academic Affairs &amp; Faculty Administration</div>
+                    <div class="inst-contact">Main Campus &bull; Faculty Staff Directory &bull; faculty@nishinstitution.ac.ke</div>
+                </div>
+            </div>
+            <div class="classification-badge">
+                OFFICIAL RECORD<br>FACULTY ROSTER
+            </div>
+        </header>
+
+        <!-- Document Heading -->
+        <h2 class="document-heading">{{ report_title }}</h2>
+
+        <!-- Reference & Metadata Grid -->
+        <div class="document-meta-grid">
+            <div class="meta-item">
+                <span class="meta-label">DOCUMENT REF:</span>
+                <span class="meta-val"><strong>{{ report_reference }}</strong></span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">DATE GENERATED:</span>
+                <span class="meta-val">{{ generated_at }}</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">CERTIFIED BY:</span>
+                <span class="meta-val">{{ user_name }} ({{ user_role }})</span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">VERIFICATION:</span>
+                <span class="meta-val" style="color: #008744; font-weight: bold;">AUTHENTICATED APPOINTMENT</span>
+            </div>
+        </div>
+
+        <!-- Executive Metrics Summary -->
+        <div class="summary-box">
+            <div class="summary-card">
+                <div class="number">{{ summary.total_lecturers }}</div>
+                <div class="label">Total Academic Staff</div>
+            </div>
+            <div class="summary-card">
+                <div class="number" style="color: #166534;">{{ summary.active_count }}</div>
+                <div class="label">Active Faculty Members</div>
+            </div>
+        </div>
+
+        <!-- Records Table -->
+        <div class="section-header">Academic Faculty &amp; Lecturer Roster</div>
+        {% if lecturers %}
+            <table class="formal-table">
+                <thead>
+                    <tr>
+                        <th style="width: 6%;">#</th>
+                        <th style="width: 28%;">Lecturer Name</th>
+                        <th style="width: 20%;">Staff / ID Number</th>
+                        <th style="width: 28%;">Institutional Email</th>
+                        <th style="width: 18%;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lecturer in lecturers %}
+                        <tr>
+                            <td>{{ lecturer.index }}</td>
+                            <td><strong>{{ lecturer.full_name }}</strong></td>
+                            <td>{{ lecturer.institution_id }}</td>
+                            <td>{{ lecturer.email }}</td>
+                            <td>
+                                <span class="badge badge-active">{{ lecturer.status }}</span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% else %}
+            <div style="padding: 25px; text-align: center; border: 1px dashed #cbd5e1; margin-bottom: 25px; color: #64748b; font-family: Arial, sans-serif;">
+                No registered academic faculty / lecturer accounts found in the registry.
+            </div>
+        {% endif %}
+
+        <!-- Formal Attestation & Signatures -->
+        <section class="signoff-section">
+            <p class="attestation-statement">
+                I hereby certify that the academic faculty roster presented above represents the complete and authentic record of 
+                lecturers and instructors officially registered in the Nish Institution Faculty &amp; Academic Safety Portal.
+            </p>
+
+            <div class="stamp-container">
+                <div class="official-stamp">
+                    Nish Institution<br>
+                    Academic Affairs<br>
+                    [ Official Stamp ]
+                </div>
+            </div>
+
+            <div class="signatures-grid">
+                <div class="signature-box">
+                    <div class="signature-title">{{ user_name }}</div>
+                    <div class="signature-sub">Designation: {{ user_role }}</div>
+                    <div class="signature-sub">Issuing Administrator</div>
+                </div>
+                <div class="signature-box">
+                    <div class="signature-title">Dean of Academic Affairs</div>
+                    <div class="signature-sub">Directorate of Faculty Governance</div>
+                    <div class="signature-sub">Nish Institution Main Campus</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Confidentiality Notice & Legal Footer -->
+        <footer class="document-footer">
+            CONFIDENTIALITY NOTICE: This faculty directory contains confidential institutional personnel records. 
+            Unauthorized retention, copying, or forwarding of this document is strictly prohibited. Generated automatically by Nish Institution Portal.
+        </footer>
+    </div>
+
+</body>
+</html>

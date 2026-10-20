@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ login_title|default("Administrator login") }} - Nish Institution{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">{% endblock %}
+{% block body %}
+<main class="auth-page">
+    <header class="auth-brand">
+        <h1>Nish Institution</h1>
+        <p>{{ login_description|default("Administrator area") }}</p>
+    </header>
+    <section class="auth-panel">
+        <h2>{{ login_title|default("Administrator login") }}</h2>
+        {% if error %}<p class="auth-error" role="alert">{{ error }}</p>{% endif %}
+        <form action="{{ login_action|default('/admin/login') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <label for="identifier">{{ login_identifier_label|default("Username") }}</label>
+            <input id="identifier" type="{{ 'email' if login_identifier_label else 'text' }}" name="identifier" autocomplete="email" value="{{ identifier|default('') }}" required>
+            <label for="password">Password</label>
+            <input id="password" type="password" name="password" autocomplete="current-password" required>
+            <button type="submit">Log in</button>
+        </form>
+        <p class="auth-link"><a href="/">Back to home</a></p>
+        {% if signup_action %}
+        <p class="auth-link"><a href="{{ signup_action }}">Create a lecturer account</a></p>
+        {% endif %}
+    </section>
+</main>
+{% endblock %}
