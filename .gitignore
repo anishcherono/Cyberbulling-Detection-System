@@ -7,4 +7,4 @@ __pycache__/
 *.db
 cyberbullying.db
 .pytest_cache/
-
+.vscode/
