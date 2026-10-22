@@ -209,8 +209,32 @@ class TestPrintableReports(unittest.TestCase):
         self.assertIn(b"CYBERBULLYING", response.data)
         self.assertIn(b"window.print()", response.data)
 
+    @patch("routes.admin.database_cursor")
+    def test_admin_print_all_users(self, mock_db):
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = [
+            ("System Admin", None, "admin@nish.edu", "Administrator", "active", None),
+            ("Dr. Kelvin Thorne", "FAC-001", "thorne@lecturers.nish.edu", "Teacher", "active", None),
+            ("Jane Wanjiku", "STU-2026-0001", "jane@students.nish.edu", "Student", "banned", None),
+        ]
+        mock_db.return_value.__enter__.return_value = (None, mock_cursor)
+
+        with self.client.session_transaction() as sess:
+            sess["admin_logged_in"] = True
+            sess["admin_name"] = "Registrar"
+
+        response = self.client.get("/admin/users/print")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"OFFICIAL REGISTERED USERS DIRECTORY", response.data)
+        self.assertIn(b"Jane Wanjiku", response.data)
+        self.assertIn(b"Dr. Kelvin Thorne", response.data)
+        self.assertIn(b"Lecturer", response.data)
+        self.assertIn(b"Banned", response.data)
+        self.assertIn(b"window.print()", response.data)
+
     def test_admin_print_unauthorized_redirect(self):
         for endpoint in [
+            "/admin/users/print",
             "/admin/students/print",
             "/admin/lecturers/print",
             "/admin/cyberbullying-messages/print",

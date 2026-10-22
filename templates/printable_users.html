@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ report_title }} - Nish Institution</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: #222;
+            background: #f4f6f8;
+        }
+        .toolbar {
+            background: #174A7C;
+            color: #fff;
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .btn {
+            background: #00A859;
+            color: #fff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        .btn-back {
+            background: rgba(255, 255, 255, 0.2);
+            margin-left: 8px;
+        }
+        .page {
+            max-width: 900px;
+            margin: 24px auto;
+            background: #fff;
+            padding: 40px;
+            border: 1px solid #ddd;
+        }
+        .header {
+            text-align: center;
+            border-bottom: 2px solid #174A7C;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            margin: 0;
+            color: #174A7C;
+            font-size: 24px;
+        }
+        .header h2 {
+            margin: 6px 0 0;
+            font-size: 16px;
+            color: #444;
+        }
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 18px;
+        }
+        .summary {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .summary-box {
+            flex: 1;
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            padding: 10px;
+            text-align: center;
+        }
+        .summary-box strong {
+            display: block;
+            font-size: 20px;
+            color: #174A7C;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        th {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            border-top: 1px solid #ddd;
+            padding-top: 12px;
+        }
+        @media print {
+            body { background: #fff; }
+            .toolbar { display: none; }
+            .page { margin: 0; border: none; padding: 0; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toolbar">
+        <div><strong>Nish Institution</strong> &bull; {{ report_title }}</div>
+        <div>
+            <button type="button" class="btn" onclick="window.print();">Print / Save as PDF</button>
+            <a href="{{ back_url or '/admin' }}" class="btn btn-back">Back to Dashboard</a>
+        </div>
+    </div>
+
+    <div class="page">
+        <div class="header">
+            <h1>NISH INSTITUTION</h1>
+            <h2>{{ report_title }}</h2>
+        </div>
+
+        <div class="meta">
+            <div><strong>Ref:</strong> {{ report_reference }}</div>
+            <div><strong>Prepared by:</strong> {{ user_name }}</div>
+            <div><strong>Date:</strong> {{ generated_at | safe }}</div>
+        </div>
+
+        <div class="summary">
+            <div class="summary-box">
+                <strong>{{ summary.total_users }}</strong>
+                <span>Total Users</span>
+            </div>
+            <div class="summary-box">
+                <strong>{{ summary.students }}</strong>
+                <span>Students</span>
+            </div>
+            <div class="summary-box">
+                <strong>{{ summary.lecturers }}</strong>
+                <span>Lecturers</span>
+            </div>
+            <div class="summary-box">
+                <strong>{{ summary.admins }}</strong>
+                <span>Administrators</span>
+            </div>
+        </div>
+
+        {% if users %}
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Full Name</th>
+                    <th>ID Number</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Date Registered</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.index }}</td>
+                    <td>{{ user.full_name }}</td>
+                    <td>{{ user.institution_id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{{ user.role }}</td>
+                    <td>{{ user.status }}</td>
+                    <td>{{ user.date_registered }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No registered users found.</p>
+        {% endif %}
+
+        <div class="footer">
+            Generated from the Nish Institution Cyberbullying Detection Portal.
+        </div>
+    </div>
+
+</body>
+</html>

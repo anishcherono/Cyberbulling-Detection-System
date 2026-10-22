@@ -1,7 +1,5 @@
 from functools import lru_cache
 
-from transformers import pipeline
-
 MODEL_NAME = "Davephoenix/bert-bullying-detector"
 MAX_MESSAGE_LENGTH = 2000
 MAX_TOKENS = 512
@@ -9,6 +7,8 @@ MAX_TOKENS = 512
 
 @lru_cache(maxsize=1)
 def get_classifier():
+    from transformers import pipeline  # imported here so the app starts fast
+
     return pipeline(
         "text-classification",
         model=MODEL_NAME,

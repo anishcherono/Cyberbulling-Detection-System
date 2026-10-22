@@ -372,6 +372,7 @@
     <div class="nav">
         <a href="/admin">Dashboard</a>
         <a href="/reports">Reports</a>
+        <a href="/admin/users/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print All Users</a>
         <a href="/admin/students/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print Students</a>
         <a href="/admin/lecturers/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print Lecturers</a>
         <a href="/admin/cyberbullying-messages/print" target="_blank" style="color: #fca5a5; font-weight: bold;">&#128438; Print Cyberbullying Messages</a>
@@ -444,7 +445,10 @@
         <div class="section student-directory">
             <div class="section-header-row">
                 <h2 style="margin: 0;">Registered Students</h2>
-                <a href="/admin/students/print" target="_blank" class="print-doc-btn">&#128438; Print Student Roster</a>
+                <div style="display: flex; gap: 10px;">
+                    <a href="/admin/users/print" target="_blank" class="print-doc-btn">&#128438; Print All Users</a>
+                    <a href="/admin/students/print" target="_blank" class="print-doc-btn">&#128438; Print Student Roster</a>
+                </div>
             </div>
             {% if students %}
             <table>

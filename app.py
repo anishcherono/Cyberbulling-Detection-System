@@ -1,6 +1,38 @@
 import os
+import subprocess
+import sys
 import threading
+import venv
 import webbrowser
+
+
+def setup_venv():
+    project_dir = os.path.dirname(os.path.abspath(__file__))
+    venv_dir = os.path.join(project_dir, ".venv")
+    requirements = os.path.join(project_dir, "requirements.txt")
+    venv_python = (
+        os.path.join(venv_dir, "Scripts", "python.exe")
+        if os.name == "nt"
+        else os.path.join(venv_dir, "bin", "python")
+    )
+
+    if os.path.normcase(os.path.abspath(sys.prefix)) == os.path.normcase(venv_dir):
+        return
+
+    if not os.path.exists(venv_python):
+        print("Creating virtual environment (.venv)...")
+        venv.create(venv_dir, with_pip=True)
+
+    print("Checking and installing requirements...")
+    subprocess.check_call(
+        [venv_python, "-m", "pip", "install", "-q", "--disable-pip-version-check", "-r", requirements]
+    )
+
+    sys.exit(subprocess.call([venv_python, *sys.argv]))
+
+
+if __name__ == "__main__":
+    setup_venv()
 
 from dotenv import load_dotenv
 from flask import Flask, render_template

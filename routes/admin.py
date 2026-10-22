@@ -622,6 +622,65 @@ def print_lecturers():
     )
 
 
+@admin_bp.route("/admin/users/print")
+@admin_bp.route("/users/print")
+def print_all_users():
+    if not session.get("admin_logged_in"):
+        return _admin_login_redirect()
+
+    from datetime import datetime
+
+    with database_cursor() as (_, cursor):
+        cursor.execute(
+            """
+            SELECT full_name, institution_id, email, role, status, date_created
+            FROM Users
+            ORDER BY role ASC, full_name ASC
+            """
+        )
+        rows = cursor.fetchall()
+
+    role_names = {"student": "Student", "teacher": "Lecturer", "lecturer": "Lecturer",
+                  "administrator": "Administrator", "admin": "Administrator"}
+    status_names = {"active": "Active", "temporarily_restricted": "Restricted", "banned": "Banned"}
+
+    users = []
+    counts = {"Student": 0, "Lecturer": 0, "Administrator": 0}
+    for idx, row in enumerate(rows, start=1):
+        role = role_names.get((row[3] or "").strip().lower(), (row[3] or "Unknown").capitalize())
+        counts[role] = counts.get(role, 0) + 1
+        status = (row[4] or "active").strip().lower()
+        users.append({
+            "index": idx,
+            "full_name": row[0],
+            "institution_id": row[1] or "Not provided",
+            "email": row[2] or "Not provided",
+            "role": role,
+            "status": status_names.get(status, status.capitalize()),
+            "date_registered": row[5].strftime("%b %d, %Y") if hasattr(row[5], "strftime") else str(row[5] or "N/A")[:10],
+        })
+
+    now = datetime.now()
+    summary = {
+        "total_users": len(users),
+        "students": counts.get("Student", 0),
+        "lecturers": counts.get("Lecturer", 0),
+        "admins": counts.get("Administrator", 0),
+    }
+
+    return render_template(
+        "printable_users.html",
+        report_title="OFFICIAL REGISTERED USERS DIRECTORY",
+        report_reference=f"NISH/ADM/USR-{now.strftime('%Y%m%d-%H%M')}",
+        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        user_name=session.get("admin_name", "System Administrator"),
+        user_role="Institutional Administrator",
+        summary=summary,
+        users=users,
+        back_url=url_for("admin.admin_dashboard"),
+    )
+
+
 @admin_bp.route("/admin/cyberbullying-messages/print")
 @admin_bp.route("/messages/cyberbullying/print")
 def print_cyberbullying_messages():
