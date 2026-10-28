@@ -36,8 +36,6 @@ def get_mpesa_config():
         "callback_url": os.getenv(
             "MPESA_CALLBACK_URL", "https://mydomain.com/donations/callback"
         ).strip(),
-        "mock_fallback": os.getenv("MPESA_MOCK_FALLBACK", "true").strip().lower()
-        in ("1", "true", "yes"),
     }
 
 
@@ -50,9 +48,6 @@ def get_oauth_token():
 
     cfg = get_mpesa_config()
     if not cfg["consumer_key"] or not cfg["consumer_secret"]:
-        if cfg["mock_fallback"]:
-            logger.info("M-Pesa credentials not configured; using sandbox mock token.")
-            return "mock_sandbox_token"
         raise ValueError("MPESA_CONSUMER_KEY and MPESA_CONSUMER_SECRET must be set.")
 
     token_url = f"{cfg['base_url']}/oauth/v1/generate?grant_type=client_credentials"
@@ -77,9 +72,6 @@ def get_oauth_token():
             raise RuntimeError(f"OAuth request failed with status {resp.status_code}: {resp.text}")
     except Exception as exc:
         logger.warning(f"Error fetching Safaricom OAuth token: {exc}")
-        if cfg["mock_fallback"]:
-            logger.info("Falling back to simulated token.")
-            return "mock_sandbox_token"
         raise
 
 
@@ -131,19 +123,14 @@ def initiate_stk_push(phone_number, amount, account_reference="NishDonation", tr
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     password = generate_password(cfg["shortcode"], cfg["passkey"], timestamp)
 
-    token = get_oauth_token()
-
-    if token == "mock_sandbox_token":
-        mock_checkout_id = f"ws_CO_{datetime.now().strftime('%d%m%Y%H%M%S')}_{uuid.uuid4().hex[:8]}"
-        mock_merchant_id = f"MERCHANT_{uuid.uuid4().hex[:10]}"
+    try:
+        token = get_oauth_token()
+    except Exception as exc:
+        logger.warning("Could not get M-Pesa access token: %s", exc)
         return {
-            "success": True,
-            "is_mock": True,
-            "merchant_request_id": mock_merchant_id,
-            "checkout_request_id": mock_checkout_id,
-            "customer_message": "Success. Prompt initiated (Sandbox Simulation). Check your phone to complete PIN entry.",
+            "success": False,
+            "error": "Could not reach M-Pesa right now. Please try again shortly.",
             "phone_number": formatted_phone,
-            "amount": amount_val,
         }
 
     process_url = f"{cfg['base_url']}/mpesa/stkpush/v1/processrequest"
@@ -175,7 +162,6 @@ def initiate_stk_push(phone_number, amount, account_reference="NishDonation", tr
         if resp.status_code == 200 and resp_data.get("ResponseCode") == "0":
             return {
                 "success": True,
-                "is_mock": False,
                 "merchant_request_id": resp_data.get("MerchantRequestID"),
                 "checkout_request_id": resp_data.get("CheckoutRequestID"),
                 "customer_message": resp_data.get(
@@ -193,18 +179,6 @@ def initiate_stk_push(phone_number, amount, account_reference="NishDonation", tr
                 or f"STK Push rejected (HTTP {resp.status_code})"
             )
             logger.warning("Daraja STK Push rejected: %s", error_msg)
-            if cfg["mock_fallback"]:
-                mock_checkout_id = f"ws_CO_{datetime.now().strftime('%d%m%Y%H%M%S')}_{uuid.uuid4().hex[:8]}"
-                mock_merchant_id = f"MERCHANT_{uuid.uuid4().hex[:10]}"
-                return {
-                    "success": True,
-                    "is_mock": True,
-                    "merchant_request_id": mock_merchant_id,
-                    "checkout_request_id": mock_checkout_id,
-                    "customer_message": "Prompt initiated (Sandbox Mode). Please enter PIN on your phone.",
-                    "phone_number": formatted_phone,
-                    "amount": amount_val,
-                }
             return {
                 "success": False,
                 "error": error_msg,
@@ -212,18 +186,6 @@ def initiate_stk_push(phone_number, amount, account_reference="NishDonation", tr
             }
     except Exception as exc:
         logger.exception("Exception calling Daraja STK Push: %s", exc)
-        if cfg["mock_fallback"]:
-            mock_checkout_id = f"ws_CO_{datetime.now().strftime('%d%m%Y%H%M%S')}_{uuid.uuid4().hex[:8]}"
-            mock_merchant_id = f"MERCHANT_{uuid.uuid4().hex[:10]}"
-            return {
-                "success": True,
-                "is_mock": True,
-                "merchant_request_id": mock_merchant_id,
-                "checkout_request_id": mock_checkout_id,
-                "customer_message": "Prompt initiated (Sandbox Mode). Please enter PIN on your phone.",
-                "phone_number": formatted_phone,
-                "amount": amount_val,
-            }
         return {
             "success": False,
             "error": f"Failed to connect to Safaricom Daraja API: {str(exc)}",

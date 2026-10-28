@@ -8,7 +8,8 @@ import webbrowser
 
 def setup_venv():
     project_dir = os.path.dirname(os.path.abspath(__file__))
-    venv_dir = os.path.join(project_dir, ".venv")
+    venv_name = "venv" if os.path.exists(os.path.join(project_dir, "venv")) else ".venv"
+    venv_dir = os.path.join(project_dir, venv_name)
     requirements = os.path.join(project_dir, "requirements.txt")
     venv_python = (
         os.path.join(venv_dir, "Scripts", "python.exe")
@@ -20,7 +21,7 @@ def setup_venv():
         return
 
     if not os.path.exists(venv_python):
-        print("Creating virtual environment (.venv)...")
+        print(f"Creating virtual environment ({venv_name})...")
         venv.create(venv_dir, with_pip=True)
 
     print("Checking and installing requirements...")
@@ -42,15 +43,14 @@ from extensions import (
     configure_app,
     database_cursor,
     ensure_default_admin,
+    init_db,
 )
-from migrations import run_migrations
 from routes.admin import admin_bp
 from routes.auth import auth_bp
 from routes.discussion import discussion_bp
 from routes.donations import donations_bp
 from routes.student import student_bp
 from routes.teacher import teacher_bp
-from user_directory import seed_student_ids_in_database
 
 load_dotenv()
 
@@ -58,10 +58,8 @@ load_dotenv()
 def create_app():
     application = Flask(__name__)
     configure_app(application)
-    run_migrations()
+    init_db()
     ensure_default_admin()
-    with database_cursor(commit=True) as (_, cursor):
-        seed_student_ids_in_database(cursor)
     application.register_blueprint(auth_bp)
     application.register_blueprint(student_bp)
     application.register_blueprint(teacher_bp)
@@ -135,14 +133,20 @@ if __name__ == "__main__":
         firefox_paths = [
             r"C:\Program Files\Mozilla Firefox\firefox.exe",
             r"C:\Program Files (x86)\Mozilla Firefox\firefox.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Mozilla Firefox\firefox.exe"),
+            os.path.expandvars(r"%PROGRAMFILES%\Mozilla Firefox\firefox.exe"),
         ]
         for path in firefox_paths:
-            if os.path.exists(path):
-                webbrowser.register("firefox", None, webbrowser.BackgroundBrowser(path))
-                webbrowser.get("firefox").open(url)
-                return
-        webbrowser.open(url)
+            if os.path.isfile(path):
+                try:
+                    subprocess.Popen([path, url])
+                    return
+                except Exception:
+                    pass
+        try:
+            os.startfile(url)
+        except Exception:
+            webbrowser.open(url)
 
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true":
-        threading.Timer(1.5, open_browser).start()
-    app.run(debug=True, port=port)
+    threading.Timer(1.0, open_browser).start()
+    app.run(debug=True, use_reloader=False, port=port)

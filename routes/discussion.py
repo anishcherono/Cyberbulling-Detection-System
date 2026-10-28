@@ -1,9 +1,13 @@
 from flask import Blueprint, jsonify, redirect, render_template, request, session, url_for
 
 from ai_detector import detect_with_ai
-from extensions import database_cursor, get_message_from_request
-from message_policy import format_blocked_notification, get_delivery_decision
-from user_directory import normalize_role
+from extensions import (
+    database_cursor,
+    format_blocked_notification,
+    get_delivery_decision,
+    get_message_from_request,
+    normalize_role,
+)
 
 discussion_bp = Blueprint("discussion", __name__)
 
@@ -32,12 +36,12 @@ def delete_message():
         return "A message is required.", 400
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
-            "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+            "UPDATE Reports SET message_id = NULL WHERE message_id = ?",
             (message_id,),
         )
-        cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+        cursor.execute("DELETE FROM Alerts WHERE message_id = ?", (message_id,))
         cursor.execute(
-            "DELETE FROM Messages WHERE message_id = %s AND sender_id = %s",
+            "DELETE FROM Messages WHERE message_id = ? AND sender_id = ?",
             (message_id, user_id),
         )
         if cursor.rowcount == 0:
@@ -57,25 +61,25 @@ def delete_discussion_item():
     with database_cursor(commit=True) as (_, cursor):
         if announcement_id is not None:
             cursor.execute(
-                "UPDATE Reports SET announcement_id = NULL WHERE announcement_id = %s",
+                "UPDATE Reports SET announcement_id = NULL WHERE announcement_id = ?",
                 (announcement_id,),
             )
             cursor.execute(
                 """
                 DELETE FROM Announcements
-                WHERE announcement_id = %s AND teacher_id = %s
+                WHERE announcement_id = ? AND teacher_id = ?
                 """,
                 (announcement_id, user_id),
             )
         else:
             cursor.execute(
-                "UPDATE Reports SET reply_id = NULL WHERE reply_id = %s",
+                "UPDATE Reports SET reply_id = NULL WHERE reply_id = ?",
                 (reply_id,),
             )
             cursor.execute(
                 """
                 DELETE FROM DiscussionReplies
-                WHERE reply_id = %s AND author_id = %s
+                WHERE reply_id = ? AND author_id = ?
                 """,
                 (reply_id, user_id),
             )
@@ -100,15 +104,15 @@ def report_content():
         return "Report reason must be 1000 characters or fewer.", 400
     with database_cursor(commit=True) as (_, cursor):
         if message_id is not None:
-            cursor.execute("SELECT message_id FROM Messages WHERE message_id = %s", (message_id,))
+            cursor.execute("SELECT message_id FROM Messages WHERE message_id = ?", (message_id,))
         elif announcement_id is not None:
             cursor.execute(
-                "SELECT announcement_id FROM Announcements WHERE announcement_id = %s",
+                "SELECT announcement_id FROM Announcements WHERE announcement_id = ?",
                 (announcement_id,),
             )
         else:
             cursor.execute(
-                "SELECT reply_id FROM DiscussionReplies WHERE reply_id = %s",
+                "SELECT reply_id FROM DiscussionReplies WHERE reply_id = ?",
                 (reply_id,),
             )
         if cursor.fetchone() is None:
@@ -118,7 +122,7 @@ def report_content():
             INSERT INTO Reports
             (message_id, announcement_id, reply_id, reported_by,
              reason, action_taken, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 message_id,
@@ -147,11 +151,11 @@ def message_recipients():
             """
             SELECT user_id, full_name, email, role, status
             FROM Users
-            WHERE user_id <> %s
+            WHERE user_id <> ?
               AND status = 'active'
               AND LOWER(role) IN ('student', 'teacher', 'lecturer')
               AND email IS NOT NULL
-              AND (LOWER(email) LIKE %s OR LOWER(full_name) LIKE %s)
+              AND (LOWER(email) LIKE ? OR LOWER(full_name) LIKE ?)
             ORDER BY full_name ASC
             LIMIT 20
             """,
@@ -187,7 +191,7 @@ def send_message():
         cursor.execute(
             """
             SELECT user_id FROM Users
-            WHERE LOWER(email) = %s AND user_id <> %s
+            WHERE LOWER(email) = ? AND user_id <> ?
             """,
             (recipient_email, sender_id),
         )
@@ -202,7 +206,7 @@ def send_message():
                 INSERT INTO Messages
                 (sender_id, recipient_id, message_text, detection_result,
                  confidence, status)
-                VALUES (%s, NULL, %s, %s, %s, %s)
+                VALUES (?, NULL, ?, ?, ?, ?)
                 """,
                 (
                     sender_id,
@@ -218,7 +222,7 @@ def send_message():
                 INSERT INTO Messages
                 (sender_id, recipient_id, message_text, detection_result,
                  confidence, status)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
                 (
                     sender_id,
@@ -235,7 +239,7 @@ def send_message():
             cursor.execute(
                 """
                 INSERT INTO Alerts (message_id, alert_type, alert_message, status)
-                VALUES (%s, %s, %s, %s)
+                VALUES (?, ?, ?, ?)
                 """,
                 (
                     message_id,
@@ -250,7 +254,7 @@ def send_message():
                 """
                 INSERT INTO Notifications
                 (user_id, notification_type, notification_message)
-                VALUES (%s, %s, %s)
+                VALUES (?, ?, ?)
                 """,
                 (
                     sender_id,
@@ -279,7 +283,7 @@ def blog():
         cursor.execute(
             """
             SELECT m.message_id, u.full_name, u.role, m.message_text,
-                   DATE_FORMAT(m.date_sent, '%Y-%m-%d %H:%i') AS posted_at,
+                   strftime('%Y-%m-%d %H:%M', m.date_sent) AS posted_at,
                    m.sender_id
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
@@ -293,7 +297,7 @@ def blog():
         cursor.execute(
             """
             SELECT a.announcement_id, u.full_name, a.title, a.content,
-                   DATE_FORMAT(a.date_created, '%Y-%m-%d %H:%i') AS posted_at,
+                   strftime('%Y-%m-%d %H:%M', a.date_created) AS posted_at,
                    a.teacher_id
             FROM Announcements a
             JOIN Users u ON a.teacher_id = u.user_id
@@ -307,7 +311,7 @@ def blog():
             """
             SELECT r.reply_id, r.message_id, r.announcement_id,
                    u.full_name, u.role, r.reply_text,
-                   DATE_FORMAT(r.date_created, '%Y-%m-%d %H:%i') AS posted_at,
+                   strftime('%Y-%m-%d %H:%M', r.date_created) AS posted_at,
                    r.author_id
             FROM DiscussionReplies r
             JOIN Users u ON r.author_id = u.user_id
@@ -347,14 +351,14 @@ def create_reply():
     with database_cursor(commit=True) as (_, cursor):
         if message_id is not None:
             cursor.execute(
-                "SELECT message_id FROM Messages WHERE message_id = %s",
+                "SELECT message_id FROM Messages WHERE message_id = ?",
                 (message_id,),
             )
         else:
             cursor.execute(
                 """
                 SELECT announcement_id FROM Announcements
-                WHERE announcement_id = %s AND status = 'published'
+                WHERE announcement_id = ? AND status = 'published'
                 """,
                 (announcement_id,),
             )
@@ -365,7 +369,7 @@ def create_reply():
             INSERT INTO DiscussionReplies
             (message_id, announcement_id, author_id, reply_text,
              detection_result, confidence, status)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 message_id,

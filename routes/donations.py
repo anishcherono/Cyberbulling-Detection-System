@@ -97,7 +97,7 @@ def initiate_donation():
                 INSERT INTO Donations (
                     donor_name, phone_number, amount,
                     merchant_request_id, checkout_request_id, status
-                ) VALUES (%s, %s, %s, %s, %s, 'PENDING')
+                ) VALUES (?, ?, ?, ?, ?, 'PENDING')
                 """,
                 (donor_name, formatted_phone, amount, merchant_request_id, checkout_request_id),
             )
@@ -111,7 +111,6 @@ def initiate_donation():
         "message": stk_result.get("customer_message"),
         "phone_number": formatted_phone,
         "amount": amount,
-        "is_mock": stk_result.get("is_mock", False),
     })
 
 
@@ -125,7 +124,7 @@ def check_status(checkout_request_id):
             """
             SELECT status, mpesa_receipt_number, result_desc, amount, donor_name
             FROM Donations
-            WHERE checkout_request_id = %s
+            WHERE checkout_request_id = ?
             """,
             (checkout_request_id,),
         )
@@ -141,36 +140,6 @@ def check_status(checkout_request_id):
         "description": desc,
         "amount": float(amount) if amount else 0,
         "donor_name": donor,
-    })
-
-
-@donations_bp.route("/donate/simulate-complete/<checkout_request_id>", methods=["POST"])
-def simulate_complete(checkout_request_id):
-    """
-    Convenient sandbox simulation endpoint to simulate user entering M-Pesa PIN.
-    """
-    import random
-    mock_receipt = f"QGH{random.randint(1000000, 9999999)}K"
-
-    with database_cursor(commit=True) as (_, cursor):
-        cursor.execute(
-            """
-            UPDATE Donations
-            SET status = 'COMPLETED',
-                mpesa_receipt_number = %s,
-                result_code = 0,
-                result_desc = 'The service request is processed successfully.'
-            WHERE checkout_request_id = %s AND status = 'PENDING'
-            """,
-            (mock_receipt, checkout_request_id),
-        )
-        if cursor.rowcount == 0:
-            return jsonify({"success": False, "message": "Transaction not found or already completed."}), 400
-
-    return jsonify({
-        "success": True,
-        "receipt": mock_receipt,
-        "message": "Payment simulation successful.",
     })
 
 
@@ -193,11 +162,11 @@ def mpesa_callback():
                 cursor.execute(
                     """
                     UPDATE Donations
-                    SET status = %s,
-                        result_code = %s,
-                        result_desc = %s,
-                        mpesa_receipt_number = COALESCE(%s, mpesa_receipt_number)
-                    WHERE checkout_request_id = %s OR merchant_request_id = %s
+                    SET status = ?,
+                        result_code = ?,
+                        result_desc = ?,
+                        mpesa_receipt_number = COALESCE(?, mpesa_receipt_number)
+                    WHERE checkout_request_id = ? OR merchant_request_id = ?
                     """,
                     (status, result_code, result_desc, receipt_number, checkout_request_id, merchant_request_id),
                 )

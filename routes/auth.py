@@ -1,8 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 from werkzeug.security import generate_password_hash
 
-from extensions import database_cursor, verify_password
-from message_policy import is_account_blocked
+from extensions import database_cursor, is_account_blocked, verify_password
 
 auth_bp = Blueprint("auth", __name__)
 STUDENT_EMAIL_DOMAIN = "@students.nish.edu"
@@ -48,8 +47,8 @@ def _find_user(identifier, role, include_restricted=False):
             f"""
             SELECT user_id, full_name, username, password, role, status
             FROM Users
-            WHERE (LOWER(email) = %s OR LOWER(username) = %s)
-              AND LOWER(role) = %s
+            WHERE (LOWER(email) = ? OR LOWER(username) = ?)
+              AND LOWER(role) = ?
               {status_filter}
             """,
             (identifier, identifier, role.lower()),
@@ -122,13 +121,23 @@ def _register(role):
         ), 400
 
     with database_cursor(commit=True) as (_, cursor):
-        cursor.execute(
-            """
-            SELECT user_id FROM Users
-            WHERE username = %s OR institution_id = %s OR email = %s
-            """,
-            (data["email"], data["institution_id"], data["email"]),
-        )
+        institution_id = data["institution_id"] or None
+        if institution_id:
+            cursor.execute(
+                """
+                SELECT user_id FROM Users
+                WHERE LOWER(username) = ? OR LOWER(institution_id) = LOWER(?) OR LOWER(email) = ?
+                """,
+                (data["email"], institution_id, data["email"]),
+            )
+        else:
+            cursor.execute(
+                """
+                SELECT user_id FROM Users
+                WHERE LOWER(username) = ? OR LOWER(email) = ?
+                """,
+                (data["email"], data["email"]),
+            )
         if cursor.fetchone() is not None:
             error = "Username, institution ID, or email is already registered."
             return render_template(
@@ -138,15 +147,19 @@ def _register(role):
                 error=error,
                 form_data=data,
             ), 409
+        if not institution_id and role == "Teacher":
+            cursor.execute("SELECT COUNT(*) FROM Users WHERE LOWER(role) = 'teacher'")
+            next_num = (cursor.fetchone()[0] or 0) + 1
+            institution_id = f"LEC-2026-{next_num:04d}"
         cursor.execute(
             """
             INSERT INTO Users
             (full_name, institution_id, email, username, password, role)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 data["full_name"],
-                data["institution_id"],
+                institution_id,
                 data["email"],
                 data["email"],
                 generate_password_hash(data["password"]),

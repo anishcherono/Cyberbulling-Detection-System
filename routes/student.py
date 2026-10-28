@@ -5,8 +5,9 @@ from extensions import (
     REPORT_REASON_MAX_LENGTH,
     database_cursor,
     get_message_from_request,
+    is_account_blocked,
+    notice_from_notification_row,
 )
-from message_policy import is_account_blocked
 
 student_bp = Blueprint("student", __name__)
 
@@ -22,7 +23,7 @@ def _student_required():
     if user_id is not None:
         with database_cursor() as (_, cursor):
             cursor.execute(
-                "SELECT status FROM Users WHERE user_id = %s",
+                "SELECT status FROM Users WHERE user_id = ?",
                 (user_id,),
             )
             account = cursor.fetchone()
@@ -44,12 +45,12 @@ def delete_message():
         return "A message is required.", 400
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
-            "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+            "UPDATE Reports SET message_id = NULL WHERE message_id = ?",
             (message_id,),
         )
-        cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+        cursor.execute("DELETE FROM Alerts WHERE message_id = ?", (message_id,))
         cursor.execute(
-            "DELETE FROM Messages WHERE message_id = %s AND sender_id = %s",
+            "DELETE FROM Messages WHERE message_id = ? AND sender_id = ?",
             (message_id, session["student_user_id"]),
         )
         if cursor.rowcount == 0:
@@ -68,9 +69,9 @@ def delete_inbox_message():
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
-            INSERT IGNORE INTO MessageInboxDeletions (user_id, message_id)
-            SELECT %s, message_id FROM Messages
-            WHERE message_id = %s AND recipient_id = %s
+            INSERT OR IGNORE INTO MessageInboxDeletions (user_id, message_id)
+            SELECT ?, message_id FROM Messages
+            WHERE message_id = ? AND recipient_id = ?
             """,
             (session["student_user_id"], message_id, session["student_user_id"]),
         )
@@ -91,10 +92,11 @@ def student_dashboard():
                    m.detection_result, m.confidence, m.date_sent
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
-            WHERE m.recipient_id = %s
+            WHERE m.recipient_id = ?
+              AND m.status = 'checked'
               AND NOT EXISTS (
                   SELECT 1 FROM MessageInboxDeletions d
-                  WHERE d.user_id = %s AND d.message_id = m.message_id
+                  WHERE d.user_id = ? AND d.message_id = m.message_id
               )
             ORDER BY m.message_id DESC
             LIMIT 20
@@ -108,7 +110,7 @@ def student_dashboard():
                    m.detection_result, m.confidence, m.date_sent
             FROM Messages m
             JOIN Users u ON m.recipient_id = u.user_id
-            WHERE m.sender_id = %s
+            WHERE m.sender_id = ?
             ORDER BY m.message_id DESC
             LIMIT 20
             """,
@@ -119,7 +121,7 @@ def student_dashboard():
             """
             SELECT notification_id, notification_message, date_created
             FROM Notifications
-            WHERE user_id = %s
+            WHERE user_id = ?
             ORDER BY notification_id DESC
             LIMIT 10
             """,
@@ -142,7 +144,7 @@ def _save_public_post(message):
             """
             INSERT INTO Messages
             (sender_id, recipient_id, message_text, detection_result, confidence, status)
-            VALUES (%s, NULL, %s, %s, %s, %s)
+            VALUES (?, NULL, ?, ?, ?, ?)
             """,
             (
                 session["student_user_id"],
@@ -157,7 +159,7 @@ def _save_public_post(message):
             cursor.execute(
                 """
                 INSERT INTO Alerts (message_id, alert_type, alert_message, status)
-                VALUES (%s, %s, %s, %s)
+                VALUES (?, ?, ?, ?)
                 """,
                 (
                     message_id,
@@ -193,7 +195,7 @@ def report_message():
         return f"Report reason must be {REPORT_REASON_MAX_LENGTH} characters or fewer.", 400
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
-            "SELECT message_id FROM Messages WHERE message_id = %s AND sender_id = %s",
+            "SELECT message_id FROM Messages WHERE message_id = ? AND sender_id = ?",
             (message_id, session.get("student_user_id")),
         )
         if cursor.fetchone() is None:
@@ -202,7 +204,7 @@ def report_message():
             """
             INSERT INTO Reports
             (message_id, reported_by, reason, action_taken, status)
-            VALUES (%s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (message_id, session["student_user_id"], reason, "Pending", "Pending"),
         )
@@ -227,7 +229,7 @@ def print_student_report():
         cursor.execute(
             """
             SELECT full_name, institution_id, email
-            FROM Users WHERE user_id = %s
+            FROM Users WHERE user_id = ?
             """,
             (user_id,),
         )
@@ -242,7 +244,7 @@ def print_student_report():
             JOIN Users sender ON m.sender_id = sender.user_id
             LEFT JOIN Users recipient ON m.recipient_id = recipient.user_id
             LEFT JOIN Reports r ON m.message_id = r.message_id
-            WHERE m.sender_id = %s OR m.recipient_id = %s
+            WHERE m.sender_id = ? OR m.recipient_id = ?
             ORDER BY m.message_id DESC
             LIMIT 50
             """,
@@ -269,18 +271,29 @@ def print_student_report():
 
         date_str = r[1].strftime("%b %d, %Y %H:%M") if hasattr(r[1], "strftime") else str(r[1] or "")
 
+        status_labels = {
+            "warning_issued": "Warning Issued",
+            "blocked_admin_review": "Blocked (Pending Review)",
+            "restricted": "Restricted",
+            "banned": "Banned",
+            "checked": "Cleared / Delivered",
+            "Resolved": "Resolved",
+            "Pending": "Pending",
+        }
+        raw_stat = r[10] or r[7] or "Recorded"
+
         records.append({
             "ref_id": f"MSG-{r[0]:04d}",
             "date_str": date_str,
             "sender": r[2] or "Me",
-            "recipient": r[3] or "Public / Direct",
+            "recipient": r[3] or "Public Forum",
             "reported_by": "Self" if r[8] else None,
             "content": r[4],
             "reason": r[8],
             "is_cyberbullying": is_cb,
             "confidence": float(r[6]) if r[6] is not None else None,
-            "action_taken": r[9] or "Standard Filter Check",
-            "status": r[10] or r[7] or "Recorded",
+            "action_taken": r[9] or ("Flagged by AI Filter" if is_cb else "Standard AI Filter Check"),
+            "status": status_labels.get(raw_stat, raw_stat.replace("_", " ").title()),
         })
 
     now = datetime.now()
@@ -296,7 +309,7 @@ def print_student_report():
         "printable_report.html",
         report_title="OFFICIAL STUDENT DIGITAL COMMUNICATION & SAFETY RECORD",
         report_reference=f"NISH/STU/REC-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=user_info[0],
         user_role=f"Student (ID: {inst_id})",
         summary=summary,
@@ -311,8 +324,6 @@ def view_student_notice(notification_id):
     if redirect_response:
         return redirect_response
 
-    from decision_templates import notice_from_notification_row
-
     user_id = session.get("student_user_id")
 
     with database_cursor() as (_, cursor):
@@ -322,7 +333,7 @@ def view_student_notice(notification_id):
                    u.full_name, u.institution_id, u.email
             FROM Notifications n
             JOIN Users u ON n.user_id = u.user_id
-            WHERE n.notification_id = %s AND n.user_id = %s
+            WHERE n.notification_id = ? AND n.user_id = ?
             """,
             (notification_id, user_id),
         )

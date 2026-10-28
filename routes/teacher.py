@@ -1,8 +1,7 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
 from ai_detector import detect_with_ai
-from extensions import database_cursor, get_message_from_request
-from message_policy import is_account_blocked
+from extensions import database_cursor, get_message_from_request, is_account_blocked
 
 teacher_bp = Blueprint("teacher", __name__)
 
@@ -14,7 +13,7 @@ def _teacher_required():
     if user_id is not None:
         with database_cursor() as (_, cursor):
             cursor.execute(
-                "SELECT status FROM Users WHERE user_id = %s",
+                "SELECT status FROM Users WHERE user_id = ?",
                 (user_id,),
             )
             account = cursor.fetchone()
@@ -36,13 +35,13 @@ def delete_announcement():
         return "An announcement is required.", 400
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
-            "UPDATE Reports SET announcement_id = NULL WHERE announcement_id = %s",
+            "UPDATE Reports SET announcement_id = NULL WHERE announcement_id = ?",
             (announcement_id,),
         )
         cursor.execute(
             """
             DELETE FROM Announcements
-            WHERE announcement_id = %s AND teacher_id = %s
+            WHERE announcement_id = ? AND teacher_id = ?
             """,
             (announcement_id, session["teacher_user_id"]),
         )
@@ -61,12 +60,12 @@ def delete_message():
         return "A message is required.", 400
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
-            "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+            "UPDATE Reports SET message_id = NULL WHERE message_id = ?",
             (message_id,),
         )
-        cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
+        cursor.execute("DELETE FROM Alerts WHERE message_id = ?", (message_id,))
         cursor.execute(
-            "DELETE FROM Messages WHERE message_id = %s AND sender_id = %s",
+            "DELETE FROM Messages WHERE message_id = ? AND sender_id = ?",
             (message_id, session["teacher_user_id"]),
         )
         if cursor.rowcount == 0:
@@ -85,9 +84,9 @@ def delete_inbox_message():
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
-            INSERT IGNORE INTO MessageInboxDeletions (user_id, message_id)
-            SELECT %s, message_id FROM Messages
-            WHERE message_id = %s AND recipient_id = %s
+            INSERT OR IGNORE INTO MessageInboxDeletions (user_id, message_id)
+            SELECT ?, message_id FROM Messages
+            WHERE message_id = ? AND recipient_id = ?
             """,
             (session["teacher_user_id"], message_id, session["teacher_user_id"]),
         )
@@ -109,7 +108,7 @@ def teacher_dashboard():
             SELECT announcement_id, title, content, detection_result,
                    confidence, date_created, status
             FROM Announcements
-            WHERE teacher_id = %s
+            WHERE teacher_id = ?
             ORDER BY announcement_id DESC
             LIMIT 20
             """,
@@ -124,7 +123,7 @@ def teacher_dashboard():
             JOIN Users u ON r.author_id = u.user_id
             WHERE r.announcement_id IN (
                 SELECT announcement_id FROM Announcements
-                WHERE teacher_id = %s
+                WHERE teacher_id = ?
             )
               AND r.status = 'checked'
             ORDER BY r.reply_id ASC
@@ -138,10 +137,11 @@ def teacher_dashboard():
                    m.detection_result, m.confidence, m.date_sent
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
-            WHERE m.recipient_id = %s
+            WHERE m.recipient_id = ?
+              AND m.status = 'checked'
               AND NOT EXISTS (
                   SELECT 1 FROM MessageInboxDeletions d
-                  WHERE d.user_id = %s AND d.message_id = m.message_id
+                  WHERE d.user_id = ? AND d.message_id = m.message_id
               )
             ORDER BY m.message_id DESC
             LIMIT 20
@@ -155,7 +155,7 @@ def teacher_dashboard():
                    m.detection_result, m.confidence, m.date_sent
             FROM Messages m
             JOIN Users u ON m.recipient_id = u.user_id
-            WHERE m.sender_id = %s
+            WHERE m.sender_id = ?
             ORDER BY m.message_id DESC
             LIMIT 20
             """,
@@ -166,7 +166,7 @@ def teacher_dashboard():
             """
             SELECT notification_id, notification_message, date_created
             FROM Notifications
-            WHERE user_id = %s
+            WHERE user_id = ?
             ORDER BY notification_id DESC
             LIMIT 10
             """,
@@ -206,7 +206,7 @@ def create_announcement():
             """
             INSERT INTO Announcements
             (teacher_id, title, content, detection_result, confidence, status)
-            VALUES (%s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 session["teacher_user_id"],
@@ -235,7 +235,7 @@ def print_teacher_report():
         cursor.execute(
             """
             SELECT full_name, institution_id, email
-            FROM Users WHERE user_id = %s
+            FROM Users WHERE user_id = ?
             """,
             (teacher_id,),
         )
@@ -246,7 +246,7 @@ def print_teacher_report():
             SELECT announcement_id, title, content, detection_result,
                    confidence, date_created, status
             FROM Announcements
-            WHERE teacher_id = %s
+            WHERE teacher_id = ?
             ORDER BY announcement_id DESC
             LIMIT 50
             """,
@@ -261,7 +261,7 @@ def print_teacher_report():
             FROM DiscussionReplies r
             JOIN Users u ON r.author_id = u.user_id
             WHERE r.announcement_id IN (
-                SELECT announcement_id FROM Announcements WHERE teacher_id = %s
+                SELECT announcement_id FROM Announcements WHERE teacher_id = ?
             )
             ORDER BY r.reply_id DESC
             LIMIT 50
@@ -331,7 +331,7 @@ def print_teacher_report():
         "printable_report.html",
         report_title="OFFICIAL COURSE DISCUSSION & SAFETY MONITORING REPORT",
         report_reference=f"NISH/LEC/MON-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=user_info[0],
         user_role=f"Lecturer / Faculty ({inst_id})",
         summary=summary,

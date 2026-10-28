@@ -1,11 +1,9 @@
-import hmac
-import logging
+from datetime import datetime
 import os
-import secrets
+import sqlite3
 from contextlib import contextmanager
 
 from dotenv import load_dotenv
-import mysql.connector
 from flask import request
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -13,93 +11,34 @@ load_dotenv()
 
 MESSAGE_MAX_LENGTH = 2000
 REPORT_REASON_MAX_LENGTH = 1000
-logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    os.getenv("SQLITE_DB_PATH", "cyberbullying.db"),
+)
+
+
+sqlite3.register_converter(
+    "TIMESTAMP",
+    lambda val: datetime.fromisoformat(val.decode("utf-8").strip()),
+)
 
 
 def configure_app(app):
-    app.secret_key = os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    app.config["SESSION_COOKIE_SECURE"] = os.getenv(
-        "FLASK_SESSION_COOKIE_SECURE", "0"
-    ) == "1"
+    app.secret_key = os.getenv("FLASK_SECRET_KEY", "nish-institution-secret-key")
 
     @app.context_processor
     def csrf_context():
-        return {"csrf_token": get_csrf_token}
-
-    @app.before_request
-    def validate_csrf():
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-            if request.path.startswith("/donations/callback"):
-                return
-            submitted = request.form.get("csrf_token", "")
-            expected = request.cookies.get("csrf_token", "")
-            if not submitted or not expected or not hmac.compare_digest(
-                submitted, expected
-            ):
-                from flask import abort
-                abort(400, description="Invalid or missing CSRF token.")
-
-
-def get_csrf_token():
-    from flask import current_app
-
-    token = request.cookies.get("csrf_token")
-    if token:
-        return token
-    token = secrets.token_urlsafe(32)
-    current_app.after_request_funcs.setdefault(None, []).append(
-        lambda response: _set_csrf_cookie(response, token)
-    )
-    return token
-
-
-def _set_csrf_cookie(response, token):
-    response.set_cookie(
-        "csrf_token",
-        token,
-        httponly=True,
-        samesite="Lax",
-        secure=os.getenv("FLASK_SESSION_COOKIE_SECURE", "0") == "1",
-    )
-    return response
-
-
-_DATABASE_ENGINE = None
+        return {"csrf_token": lambda: ""}
 
 
 def get_connection():
-    global _DATABASE_ENGINE
-
-    if _DATABASE_ENGINE == "sqlite":
-        from sqlite_fallback import get_sqlite_connection
-        return get_sqlite_connection()
-
-    try:
-        conn = mysql.connector.connect(
-            host=os.getenv("DB_HOST", "localhost"),
-            user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", ""),
-            database=os.getenv("DB_NAME", "Cyberbulling_system"),
-            port=int(os.getenv("DB_PORT", "3306")),
-            use_pure=True,
-            connection_timeout=2,
-        )
-        if _DATABASE_ENGINE is None:
-            _DATABASE_ENGINE = "mysql"
-            logging.info("Connected to MySQL database on %s.", os.getenv("DB_HOST", "localhost"))
-        return conn
-    except Exception as exc:
-        from sqlite_fallback import get_sqlite_connection
-        if _DATABASE_ENGINE is None:
-            _DATABASE_ENGINE = "sqlite"
-            logging.warning(
-                "MySQL server is not running or unreachable (%s). Automatically falling back to SQLite.",
-                exc,
-            )
-        return get_sqlite_connection()
+    conn = sqlite3.connect(
+        DB_PATH,
+        check_same_thread=False,
+        detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+    )
+    conn.execute("PRAGMA foreign_keys = ON")
+    return conn
 
 
 @contextmanager
@@ -117,18 +56,20 @@ def database_cursor(commit=False):
         close_database(connection, cursor)
 
 
-def ensure_core_schema():
+def init_db():
+    """Create all SQLite tables if they do not exist."""
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Users (
-                user_id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 full_name VARCHAR(200) NOT NULL,
                 institution_id VARCHAR(100) NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
                 username VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
                 role VARCHAR(50) NOT NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'active',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
@@ -136,7 +77,7 @@ def ensure_core_schema():
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Messages (
-                message_id INT AUTO_INCREMENT PRIMARY KEY,
+                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 sender_id INT NOT NULL,
                 recipient_id INT NULL,
                 message_text TEXT NOT NULL,
@@ -144,19 +85,15 @@ def ensure_core_schema():
                 confidence DECIMAL(6, 5) NOT NULL DEFAULT 0,
                 status VARCHAR(30) NOT NULL DEFAULT 'checked',
                 date_sent TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_message_sender
-                    FOREIGN KEY (sender_id) REFERENCES Users(user_id)
-                    ON DELETE CASCADE,
-                CONSTRAINT fk_message_recipient
-                    FOREIGN KEY (recipient_id) REFERENCES Users(user_id)
-                    ON DELETE SET NULL
+                FOREIGN KEY (sender_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+                FOREIGN KEY (recipient_id) REFERENCES Users(user_id) ON DELETE SET NULL
             )
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Announcements (
-                announcement_id INT AUTO_INCREMENT PRIMARY KEY,
+                announcement_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 teacher_id INT NOT NULL,
                 title VARCHAR(150) NOT NULL,
                 content TEXT NOT NULL,
@@ -164,16 +101,14 @@ def ensure_core_schema():
                 confidence DECIMAL(6, 5) NOT NULL DEFAULT 0,
                 status VARCHAR(30) NOT NULL DEFAULT 'published',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_announcement_teacher
-                    FOREIGN KEY (teacher_id) REFERENCES Users(user_id)
-                    ON DELETE CASCADE
+                FOREIGN KEY (teacher_id) REFERENCES Users(user_id) ON DELETE CASCADE
             )
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS DiscussionReplies (
-                reply_id INT AUTO_INCREMENT PRIMARY KEY,
+                reply_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 message_id INT NULL,
                 announcement_id INT NULL,
                 author_id INT NOT NULL,
@@ -182,37 +117,29 @@ def ensure_core_schema():
                 confidence DECIMAL(6, 5) NOT NULL DEFAULT 0,
                 status VARCHAR(30) NOT NULL DEFAULT 'checked',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_reply_message
-                    FOREIGN KEY (message_id) REFERENCES Messages(message_id)
-                    ON DELETE CASCADE,
-                CONSTRAINT fk_reply_announcement
-                    FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id)
-                    ON DELETE CASCADE,
-                CONSTRAINT fk_reply_author
-                    FOREIGN KEY (author_id) REFERENCES Users(user_id)
-                    ON DELETE CASCADE
+                FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE CASCADE,
+                FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id) ON DELETE CASCADE,
+                FOREIGN KEY (author_id) REFERENCES Users(user_id) ON DELETE CASCADE
             )
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Alerts (
-                alert_id INT AUTO_INCREMENT PRIMARY KEY,
+                alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 message_id INT NOT NULL,
                 alert_type VARCHAR(50) NOT NULL,
                 alert_message TEXT NOT NULL,
                 status VARCHAR(30) NOT NULL DEFAULT 'unread',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_alert_message
-                    FOREIGN KEY (message_id) REFERENCES Messages(message_id)
-                    ON DELETE CASCADE
+                FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE CASCADE
             )
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Reports (
-                report_id INT AUTO_INCREMENT PRIMARY KEY,
+                report_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 message_id INT NULL,
                 announcement_id INT NULL,
                 reply_id INT NULL,
@@ -221,15 +148,52 @@ def ensure_core_schema():
                 action_taken VARCHAR(100) NOT NULL DEFAULT 'Pending',
                 status VARCHAR(30) NOT NULL DEFAULT 'Pending',
                 date_reported TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_report_message
-                    FOREIGN KEY (message_id) REFERENCES Messages(message_id)
-                    ON DELETE SET NULL,
-                CONSTRAINT fk_report_announcement
-                    FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id)
-                    ON DELETE SET NULL,
-                CONSTRAINT fk_report_by
-                    FOREIGN KEY (reported_by) REFERENCES Users(user_id)
-                    ON DELETE CASCADE
+                FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE SET NULL,
+                FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id) ON DELETE SET NULL,
+                FOREIGN KEY (reported_by) REFERENCES Users(user_id) ON DELETE CASCADE
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS MessageInboxDeletions (
+                user_id INT NOT NULL,
+                message_id INT NOT NULL,
+                date_deleted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (user_id, message_id),
+                FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
+                FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE CASCADE
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS Notifications (
+                notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INT NOT NULL,
+                notification_type VARCHAR(50) NOT NULL,
+                notification_message TEXT NOT NULL,
+                is_read BOOLEAN NOT NULL DEFAULT FALSE,
+                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+            )
+            """
+        )
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS Donations (
+                donation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                donor_name VARCHAR(150) NOT NULL DEFAULT 'Anonymous',
+                phone_number VARCHAR(20) NOT NULL,
+                amount DECIMAL(10, 2) NOT NULL,
+                merchant_request_id VARCHAR(100) NULL,
+                checkout_request_id VARCHAR(100) UNIQUE NULL,
+                mpesa_receipt_number VARCHAR(50) NULL,
+                status VARCHAR(30) NOT NULL DEFAULT 'PENDING',
+                result_code INT NULL,
+                result_desc VARCHAR(255) NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
@@ -238,143 +202,25 @@ def ensure_core_schema():
 def ensure_default_admin():
     with database_cursor() as (_, cursor):
         cursor.execute(
-            "SELECT user_id FROM Users WHERE LOWER(email) = %s OR LOWER(username) = %s",
-            ("admin@nish.edu", "admin@nish.edu"),
+            "SELECT user_id FROM Users WHERE LOWER(email) = ? OR LOWER(username) = ?",
+            ("admin@admin.nish.edu", "admin@admin.nish.edu"),
         )
         if cursor.fetchone() is None:
             with database_cursor(commit=True) as (_, insert_cursor):
                 insert_cursor.execute(
                     """
-                    INSERT INTO Users (full_name, institution_id, email, username, password, role)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO Users (full_name, institution_id, email, username, password, role, status)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
                     (
-                        "Administrator",
-                        "ADMIN-001",
-                        "admin@nish.edu",
-                        "admin@nish.edu",
+                        "System Administrator",
+                        "ADM-2026-0001",
+                        "admin@admin.nish.edu",
+                        "admin@admin.nish.edu",
                         generate_password_hash("admin123"),
                         "Administrator",
+                        "active",
                     ),
-                )
-
-
-def ensure_discussion_schema():
-    with database_cursor(commit=True) as (_, cursor):
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS DiscussionReplies (
-                reply_id INT AUTO_INCREMENT PRIMARY KEY,
-                message_id INT NULL,
-                announcement_id INT NULL,
-                author_id INT NOT NULL,
-                reply_text TEXT NOT NULL,
-                detection_result VARCHAR(100) NOT NULL,
-                confidence DECIMAL(6, 5) NOT NULL DEFAULT 0,
-                status VARCHAR(30) NOT NULL DEFAULT 'checked',
-                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT fk_reply_message
-                    FOREIGN KEY (message_id) REFERENCES Messages(message_id)
-                    ON DELETE CASCADE,
-                CONSTRAINT fk_reply_announcement
-                    FOREIGN KEY (announcement_id)
-                    REFERENCES Announcements(announcement_id)
-                    ON DELETE CASCADE,
-                CONSTRAINT fk_reply_author
-                    FOREIGN KEY (author_id) REFERENCES Users(user_id)
-                    ON DELETE CASCADE
-            )
-            """
-        )
-
-
-def ensure_messaging_schema():
-    with database_cursor(commit=True) as (_, cursor):
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS MessageInboxDeletions (
-                user_id INT NOT NULL,
-                message_id INT NOT NULL,
-                date_deleted TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (user_id, message_id),
-                FOREIGN KEY (user_id) REFERENCES Users(user_id)
-                    ON DELETE CASCADE,
-                FOREIGN KEY (message_id) REFERENCES Messages(message_id)
-                    ON DELETE CASCADE
-            )
-            """
-        )
-        cursor.execute(
-            """
-            CREATE TABLE IF NOT EXISTS Notifications (
-                notification_id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                notification_type VARCHAR(50) NOT NULL,
-                notification_message TEXT NOT NULL,
-                is_read BOOLEAN NOT NULL DEFAULT FALSE,
-                date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES Users(user_id)
-                    ON DELETE CASCADE
-            )
-            """
-        )
-        cursor.execute(
-            """
-            SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'Messages'
-              AND COLUMN_NAME = 'recipient_id'
-            """
-        )
-        if cursor.fetchone()[0] == 0:
-            cursor.execute(
-                "ALTER TABLE Messages ADD COLUMN recipient_id INT NULL AFTER sender_id"
-            )
-        cursor.execute(
-            """
-            SELECT COUNT(*) FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'Messages'
-              AND COLUMN_NAME = 'recipient_id'
-              AND REFERENCED_TABLE_NAME = 'Users'
-            """
-        )
-        if cursor.fetchone()[0] == 0:
-            cursor.execute(
-                """
-                ALTER TABLE Messages
-                ADD CONSTRAINT fk_message_recipient
-                FOREIGN KEY (recipient_id) REFERENCES Users(user_id)
-                ON DELETE SET NULL
-                """
-            )
-        cursor.execute(
-            """
-            SELECT IS_NULLABLE FROM INFORMATION_SCHEMA.COLUMNS
-            WHERE TABLE_SCHEMA = DATABASE()
-              AND TABLE_NAME = 'Reports'
-              AND COLUMN_NAME = 'message_id'
-            """
-        )
-        message_id_column = cursor.fetchone()
-        if message_id_column and message_id_column[0] == "NO":
-            cursor.execute("ALTER TABLE Reports MODIFY message_id INT NULL")
-        for column, definition in (
-            ("announcement_id", "INT NULL"),
-            ("reply_id", "INT NULL"),
-        ):
-            cursor.execute(
-                """
-                SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS
-                WHERE TABLE_SCHEMA = DATABASE()
-                  AND TABLE_NAME = 'Reports'
-                  AND COLUMN_NAME = %s
-                """,
-                (column,),
-            )
-            if cursor.fetchone()[0] == 0:
-                cursor.execute(
-                    f"ALTER TABLE Reports ADD COLUMN {column} {definition}"
                 )
 
 
@@ -386,7 +232,7 @@ def verify_password(password, stored_password):
             return True
     except (ValueError, TypeError):
         pass
-    return hmac.compare_digest(password, stored_password)
+    return password == stored_password
 
 
 def get_message_from_request():
@@ -403,3 +249,223 @@ def close_database(connection, cursor):
         cursor.close()
     if connection is not None:
         connection.close()
+
+
+def normalize_role(role):
+    normalized = str(role or "").strip().lower()
+    if normalized == "teacher":
+        return "Lecturer"
+    return normalized.title()
+
+
+def is_account_blocked(status):
+    return str(status or "").strip().lower() in {"banned", "temporarily_restricted"}
+
+
+def format_blocked_notification(notification_message, blocked_message):
+    return f"{notification_message} Blocked message: {blocked_message}"
+
+
+def get_delivery_decision(detection_result, confidence, destination_user_id):
+    is_cyberbullying = str(detection_result).startswith("Cyberbullying")
+    if is_cyberbullying:
+        confidence_pct = float(confidence) * 100
+        return {
+            "delivery_allowed": False,
+            "recipient_id": None,
+            "status": "blocked_admin_review",
+            "notification_message": (
+                f"This message was detected as cyberbullying by AI at "
+                f"{confidence_pct:.2f}%. It was blocked and not delivered."
+            ),
+        }
+    return {
+        "delivery_allowed": True,
+        "recipient_id": destination_user_id,
+        "status": "checked",
+        "notification_message": None,
+    }
+
+
+def get_admin_decision(detection_result, confidence):
+    return {
+        "action": "admin_review_required",
+        "auto_ban": False,
+        "is_cyberbullying": str(detection_result).startswith("Cyberbullying"),
+    }
+
+
+DECISION_METADATA = {
+    "warning": {
+        "title": "FORMAL DISCIPLINARY WARNING",
+        "subtitle": "Notice of Violation of Institutional Digital Communication Policy",
+        "severity": "Moderate",
+        "policy_clause": "Section 4.2 (Anti-Cyberbullying and Harassment Provisions)",
+        "sanction_summary": "Formal warning recorded in student disciplinary profile; account remains active.",
+        "directive": (
+            "You are hereby officially warned regarding your digital communication. "
+            "Please ensure all future messages follow institutional guidelines."
+        ),
+        "status_update": "warning_issued",
+        "account_status": "warning_issued",
+    },
+    "temporary_restriction": {
+        "title": "NOTICE OF TEMPORARY ACCOUNT RESTRICTION",
+        "subtitle": "Order of Immediate Communication Suspension Pending Conduct Review",
+        "severity": "High",
+        "policy_clause": "Section 4.2 & Section 5.1 (Severe Hostile Digital Conduct)",
+        "sanction_summary": "Portal communication privileges temporarily suspended.",
+        "directive": (
+            "Your institutional portal account has been placed under a temporary restriction. "
+            "Please contact the Office of Student Counseling & Welfare for account review."
+        ),
+        "status_update": "restricted",
+        "account_status": "temporarily_restricted",
+    },
+    "account_ban": {
+        "title": "NOTICE OF ACCOUNT EXPULSION & ACCESS REVOCATION",
+        "subtitle": "Final Administrative Sanction for Critical Cyberbullying Breach",
+        "severity": "Critical",
+        "policy_clause": "Section 4.2, Section 6.0 (Zero-Tolerance Cyberbullying Policy)",
+        "sanction_summary": "Indefinite suspension of student communication portal privileges.",
+        "directive": (
+            "Following review of critical cyberbullying conduct, the Administration has suspended "
+            "your account access on the Nish Institution Digital Communication Platform."
+        ),
+        "status_update": "banned",
+        "account_status": "banned",
+    },
+    "notify_only": {
+        "title": "ADMINISTRATIVE CONTENT ADVISORY",
+        "subtitle": "Informational Notification of Content Moderation Review",
+        "severity": "Low / Advisory",
+        "policy_clause": "Section 3.1 (Digital Etiquette and Responsible Communication)",
+        "sanction_summary": "Content reviewed; no disciplinary sanctions applied.",
+        "directive": (
+            "Administration has reviewed flagged content from your account. "
+            "Please remember to keep all digital communications respectful."
+        ),
+        "status_update": "reviewed",
+        "account_status": "active",
+    },
+}
+
+
+def build_formal_decision_notice(
+    student_name,
+    institution_id,
+    student_email,
+    action,
+    message_excerpt,
+    confidence,
+    incident_date=None,
+    alert_id=None,
+    admin_name="Office of Student Welfare & Discipline",
+):
+    action_key = action.strip().lower() if action else "notify_only"
+    meta = DECISION_METADATA.get(action_key, DECISION_METADATA["notify_only"])
+    now = datetime.now()
+    case_ref = f"NISH/DISC/{now.strftime('%Y')}/AL-{alert_id or 1001:04d}"
+    inst_id = institution_id or "Not Registered"
+    conf_pct = float(confidence) * 100 if confidence is not None else 0.0
+    inc_date_str = (
+        incident_date.strftime("%B %d, %Y at %H:%M")
+        if hasattr(incident_date, "strftime")
+        else str(incident_date or now.strftime("%B %d, %Y"))
+    )
+    formal_text = (
+        f"--- OFFICIAL ADMINISTRATIVE DECISION ---\n"
+        f"REF: {case_ref}\n"
+        f"ISSUED TO: {student_name} (ID: {inst_id}) | {student_email}\n"
+        f"DATE: {now.strftime('%B %d, %Y')}\n"
+        f"DECISION: {meta['title']}\n"
+        f"POLICY: {meta['policy_clause']}\n"
+        f"INCIDENT: Flagged content sent on {inc_date_str} (AI Detection: {conf_pct:.2f}%)\n"
+        f"SANCTION: {meta['sanction_summary']}\n\n"
+        f"DIRECTIVE:\n{meta['directive']}\n\n"
+        f"RIGHT OF APPEAL: You have the right to appeal within seven (7) academic days.\n"
+        f"AUTHORITY: {admin_name}, Nish Institution."
+    )
+    return {
+        "case_ref": case_ref,
+        "action": action_key,
+        "title": meta["title"],
+        "subtitle": meta["subtitle"],
+        "severity": meta["severity"],
+        "policy_clause": meta["policy_clause"],
+        "sanction_summary": meta["sanction_summary"],
+        "directive": meta["directive"],
+        "status_update": meta["status_update"],
+        "account_status": meta["account_status"],
+        "student_name": student_name,
+        "institution_id": inst_id,
+        "student_email": student_email,
+        "message_excerpt": message_excerpt or "[Flagged communication]",
+        "confidence_pct": conf_pct,
+        "incident_date_str": inc_date_str,
+        "decision_date_str": now.strftime("%B %d, %Y"),
+        "admin_authority": admin_name,
+        "formal_text": formal_text,
+    }
+
+
+def notice_from_notification_row(
+    notification_id, raw_text, date_created, student_name, institution_id, email
+):
+    text = str(raw_text or "")
+    ref = f"NISH/DISC/NOTICE-{notification_id:04d}"
+    title = "OFFICIAL DISCIPLINARY DECISION"
+    subtitle = "Formal Notice of Conduct Review"
+    severity = "Formal Review"
+    policy = "Section 4.2 (Anti-Cyberbullying Policy)"
+    sanction = "Administrative decision on record."
+    directive = text
+
+    for line in text.splitlines():
+        if line.startswith("REF:"):
+            ref = line.replace("REF:", "").strip()
+        elif line.startswith("DECISION:"):
+            title = line.replace("DECISION:", "").strip()
+        elif line.startswith("POLICY:"):
+            policy = line.replace("POLICY:", "").strip()
+        elif line.startswith("SANCTION:"):
+            sanction = line.replace("SANCTION:", "").strip()
+
+    if "BAN" in title.upper() or "EXPULSION" in title.upper():
+        severity = "Critical"
+    elif "RESTRICTION" in title.upper():
+        severity = "High"
+    elif "WARNING" in title.upper():
+        severity = "Moderate"
+
+    if "DIRECTIVE:" in text:
+        after_dir = text.split("DIRECTIVE:")[1]
+        directive = (
+            after_dir.split("RIGHT OF APPEAL:")[0].strip()
+            if "RIGHT OF APPEAL:" in after_dir
+            else after_dir.strip()
+        )
+
+    date_str = (
+        date_created.strftime("%B %d, %Y")
+        if hasattr(date_created, "strftime")
+        else str(date_created or "Recent")
+    )
+    return {
+        "case_ref": ref,
+        "title": title,
+        "subtitle": subtitle,
+        "severity": severity,
+        "policy_clause": policy,
+        "sanction_summary": sanction,
+        "directive": directive,
+        "student_name": student_name,
+        "institution_id": institution_id or "Not Registered",
+        "student_email": email,
+        "message_excerpt": "[Archived incident record]",
+        "confidence_pct": 90.0,
+        "incident_date_str": date_str,
+        "decision_date_str": date_str,
+        "admin_authority": "Office of Student Affairs & Conduct",
+        "formal_text": text,
+    }

@@ -427,10 +427,6 @@
                     An M-Pesa prompt for <strong id="modalAmount">KES 100</strong> has been sent to <span id="modalPhone" class="highlight-phone">07...</span>.
                     Please enter your M-Pesa PIN on your phone to complete your donation.
                 </p>
-                <div id="mockSimulateSection" style="display:none; margin: 15px 0; padding: 12px; background: #f0f4f8; border-radius: 6px;">
-                    <p style="font-size: 12px; color: #486581; margin: 0 0 8px;">Sandbox Testing Mode Active:</p>
-                    <button type="button" id="btnSimulatePin" class="btn-simulate">Simulate PIN Confirmation</button>
-                </div>
                 <div style="margin-top: 16px;">
                     <button type="button" id="btnCancelModal" class="btn-cancel">Close / Cancel</button>
                 </div>
@@ -472,8 +468,6 @@
         const modalErrorState = document.getElementById('modalErrorState');
         const modalAmount = document.getElementById('modalAmount');
         const modalPhone = document.getElementById('modalPhone');
-        const mockSimulateSection = document.getElementById('mockSimulateSection');
-        const btnSimulatePin = document.getElementById('btnSimulatePin');
         const btnCancelModal = document.getElementById('btnCancelModal');
         const receiptNumber = document.getElementById('receiptNumber');
         const errorDescription = document.getElementById('errorDescription');
@@ -499,19 +493,13 @@
             });
         });
 
-        function showModal(phone, amount, checkoutId, isMock) {
+        function showModal(phone, amount, checkoutId) {
             activeCheckoutId = checkoutId;
             modalAmount.textContent = 'KES ' + Number(amount).toLocaleString();
             modalPhone.textContent = phone;
             modalLoadingState.style.display = 'block';
             modalSuccessState.style.display = 'none';
             modalErrorState.style.display = 'none';
-
-            if (isMock) {
-                mockSimulateSection.style.display = 'block';
-            } else {
-                mockSimulateSection.style.display = 'none';
-            }
 
             statusModal.style.display = 'flex';
             startPolling(checkoutId);
@@ -528,8 +516,16 @@
 
         function startPolling(checkoutId) {
             if (pollInterval) clearInterval(pollInterval);
+            const startedAt = Date.now();
             pollInterval = setInterval(async () => {
                 if (!activeCheckoutId) return;
+                if (Date.now() - startedAt > 120000) {
+                    clearInterval(pollInterval);
+                    errorDescription.textContent = 'No PIN was entered in time. Please try again.';
+                    modalLoadingState.style.display = 'none';
+                    modalErrorState.style.display = 'block';
+                    return;
+                }
                 try {
                     const res = await fetch(`/donate/status/${checkoutId}`);
                     if (!res.ok) return;
@@ -551,31 +547,6 @@
             }, 2500);
         }
 
-        btnSimulatePin.addEventListener('click', async () => {
-            if (!activeCheckoutId) return;
-            btnSimulatePin.disabled = true;
-            try {
-                const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-                const formData = new FormData();
-                formData.append('csrf_token', csrfToken);
-                const res = await fetch(`/donate/simulate-complete/${activeCheckoutId}`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (data.success) {
-                    receiptNumber.textContent = data.receipt;
-                    modalLoadingState.style.display = 'none';
-                    modalSuccessState.style.display = 'block';
-                    if (pollInterval) clearInterval(pollInterval);
-                }
-            } catch (err) {
-                console.error(err);
-            } finally {
-                btnSimulatePin.disabled = false;
-            }
-        });
-
         donationForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             formError.style.display = 'none';
@@ -591,7 +562,7 @@
 
                 const result = await response.json();
                 if (result.success) {
-                    showModal(result.phone_number, result.amount, result.checkout_request_id, result.is_mock);
+                    showModal(result.phone_number, result.amount, result.checkout_request_id);
                 } else {
                     formError.textContent = result.error || 'Failed to initiate M-Pesa prompt.';
                     formError.style.display = 'block';

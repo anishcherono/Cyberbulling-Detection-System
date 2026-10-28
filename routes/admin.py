@@ -1,7 +1,11 @@
 from flask import Blueprint, redirect, render_template, request, session, url_for
 
-from extensions import database_cursor
-from message_policy import get_admin_decision, get_admin_enforcement_result, is_banned_status
+from extensions import (
+    build_formal_decision_notice,
+    database_cursor,
+    get_admin_decision,
+    notice_from_notification_row,
+)
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -14,7 +18,7 @@ def _delete_message_and_notify(cursor, message_id, reason):
     cursor.execute(
         """
         SELECT sender_id FROM Messages
-        WHERE message_id = %s
+        WHERE message_id = ?
         """,
         (message_id,),
     )
@@ -25,7 +29,7 @@ def _delete_message_and_notify(cursor, message_id, reason):
         """
         INSERT INTO Notifications
         (user_id, notification_type, notification_message)
-        VALUES (%s, %s, %s)
+        VALUES (?, ?, ?)
         """,
         (
             message[0],
@@ -34,11 +38,11 @@ def _delete_message_and_notify(cursor, message_id, reason):
         ),
     )
     cursor.execute(
-        "UPDATE Reports SET message_id = NULL WHERE message_id = %s",
+        "UPDATE Reports SET message_id = NULL WHERE message_id = ?",
         (message_id,),
     )
-    cursor.execute("DELETE FROM Alerts WHERE message_id = %s", (message_id,))
-    cursor.execute("DELETE FROM Messages WHERE message_id = %s", (message_id,))
+    cursor.execute("DELETE FROM Alerts WHERE message_id = ?", (message_id,))
+    cursor.execute("DELETE FROM Messages WHERE message_id = ?", (message_id,))
     return True
 
 
@@ -133,9 +137,9 @@ def admin_dashboard():
         result_breakdown = cursor.fetchall()
         cursor.execute(
             """
-            SELECT DATE_FORMAT(date_sent, '%Y-%m-%d'), COUNT(*) FROM Messages
-            GROUP BY DATE_FORMAT(date_sent, '%Y-%m-%d')
-            ORDER BY DATE_FORMAT(date_sent, '%Y-%m-%d') ASC LIMIT 30
+            SELECT strftime('%Y-%m-%d', date_sent), COUNT(*) FROM Messages
+            GROUP BY strftime('%Y-%m-%d', date_sent)
+            ORDER BY strftime('%Y-%m-%d', date_sent) ASC LIMIT 30
             """
         )
         daily_activity = cursor.fetchall()
@@ -202,7 +206,7 @@ def mark_alert_read(alert_id):
     if not session.get("admin_logged_in"):
         return _admin_login_redirect()
     with database_cursor(commit=True) as (_, cursor):
-        cursor.execute("UPDATE Alerts SET status = 'read' WHERE alert_id = %s", (alert_id,))
+        cursor.execute("UPDATE Alerts SET status = 'read' WHERE alert_id = ?", (alert_id,))
     return redirect(url_for("admin.admin_dashboard"))
 
 
@@ -215,7 +219,7 @@ def remove_restriction(user_id):
             """
             UPDATE Users
             SET status = 'active'
-            WHERE user_id = %s
+            WHERE user_id = ?
               AND status = 'temporarily_restricted'
             """,
             (user_id,),
@@ -234,7 +238,7 @@ def unban_account(user_id):
             """
             UPDATE Users
             SET status = 'active'
-            WHERE user_id = %s AND status = 'banned'
+            WHERE user_id = ? AND status = 'banned'
             """,
             (user_id,),
         )
@@ -254,7 +258,6 @@ def send_admin_decision(alert_id):
         "temporary_restriction",
         "account_ban",
     }
-    from decision_templates import build_formal_decision_notice
 
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
@@ -266,7 +269,7 @@ def send_admin_decision(alert_id):
             FROM Alerts
             JOIN Messages ON Alerts.message_id = Messages.message_id
             JOIN Users ON Messages.sender_id = Users.user_id
-            WHERE Alerts.alert_id = %s
+            WHERE Alerts.alert_id = ?
             """,
             (alert_id,),
         )
@@ -305,16 +308,16 @@ def send_admin_decision(alert_id):
         )
 
         cursor.execute(
-            "UPDATE Alerts SET status = 'reviewed' WHERE alert_id = %s",
+            "UPDATE Alerts SET status = 'reviewed' WHERE alert_id = ?",
             (alert_id,),
         )
         cursor.execute(
-            "UPDATE Messages SET status = %s WHERE message_id = %s",
+            "UPDATE Messages SET status = ? WHERE message_id = ?",
             (notice["status_update"], message_id),
         )
         if notice["account_status"] != "active":
             cursor.execute(
-                "UPDATE Users SET status = %s WHERE user_id = %s",
+                "UPDATE Users SET status = ? WHERE user_id = ?",
                 (notice["account_status"], sender_id),
             )
 
@@ -322,7 +325,7 @@ def send_admin_decision(alert_id):
             """
             INSERT INTO Notifications
             (user_id, notification_type, notification_message)
-            VALUES (%s, %s, %s)
+            VALUES (?, ?, ?)
             """,
             (
                 sender_id,
@@ -339,8 +342,6 @@ def view_admin_notice(notification_id):
     if not session.get("admin_logged_in"):
         return _admin_login_redirect()
 
-    from decision_templates import notice_from_notification_row
-
     with database_cursor() as (_, cursor):
         cursor.execute(
             """
@@ -348,7 +349,7 @@ def view_admin_notice(notification_id):
                    u.full_name, u.institution_id, u.email
             FROM Notifications n
             JOIN Users u ON n.user_id = u.user_id
-            WHERE n.notification_id = %s
+            WHERE n.notification_id = ?
             """,
             (notification_id,),
         )
@@ -478,7 +479,7 @@ def print_admin_report():
         "printable_report.html",
         report_title="OFFICIAL CYBERBULLYING INCIDENT & MONITORING REPORT",
         report_reference=f"NISH/ADM/RPT-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=session.get("admin_name", "System Administrator"),
         user_role="Institutional Administrator",
         summary=summary,
@@ -522,9 +523,12 @@ def print_students():
         elif status == "banned":
             banned_count += 1
             display_status = "Banned"
+        elif status == "warning_issued":
+            active_count += 1
+            display_status = "Warning Issued"
         else:
             active_count += 1
-            display_status = status.capitalize()
+            display_status = status.replace("_", " ").title()
 
         date_str = s[5].strftime("%b %d, %Y") if hasattr(s[5], "strftime") else str(s[5] or "N/A")
 
@@ -551,7 +555,7 @@ def print_students():
         "printable_students.html",
         report_title="OFFICIAL ENROLLED STUDENTS DIRECTORY",
         report_reference=f"NISH/ADM/STU-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=session.get("admin_name", "System Administrator"),
         user_role="Institutional Administrator",
         summary=summary,
@@ -613,7 +617,7 @@ def print_lecturers():
         "printable_lecturers.html",
         report_title="OFFICIAL FACULTY & LECTURERS DIRECTORY",
         report_reference=f"NISH/ADM/FAC-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=session.get("admin_name", "System Administrator"),
         user_role="Institutional Administrator",
         summary=summary,
@@ -642,7 +646,12 @@ def print_all_users():
 
     role_names = {"student": "Student", "teacher": "Lecturer", "lecturer": "Lecturer",
                   "administrator": "Administrator", "admin": "Administrator"}
-    status_names = {"active": "Active", "temporarily_restricted": "Restricted", "banned": "Banned"}
+    status_names = {
+        "active": "Active",
+        "temporarily_restricted": "Restricted",
+        "banned": "Banned",
+        "warning_issued": "Warning Issued",
+    }
 
     users = []
     counts = {"Student": 0, "Lecturer": 0, "Administrator": 0}
@@ -672,7 +681,7 @@ def print_all_users():
         "printable_users.html",
         report_title="OFFICIAL REGISTERED USERS DIRECTORY",
         report_reference=f"NISH/ADM/USR-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=session.get("admin_name", "System Administrator"),
         user_role="Institutional Administrator",
         summary=summary,
@@ -720,10 +729,18 @@ def print_cyberbullying_messages():
         unique_senders.add(sender_name)
 
         status_val = str(r[7] or "checked").strip()
-        if status_val.lower() in ("deleted", "restricted", "banned", "warning", "actioned"):
+        if status_val.lower() in ("deleted", "restricted", "banned", "warning", "warning_issued", "actioned"):
             actioned_count += 1
 
         date_str = r[8].strftime("%b %d, %Y %H:%M") if hasattr(r[8], "strftime") else str(r[8] or "")
+        status_labels = {
+            "warning_issued": "Warning Issued",
+            "blocked_admin_review": "Blocked (Review)",
+            "restricted": "Restricted",
+            "temporarily_restricted": "Restricted",
+            "banned": "Banned",
+            "checked": "Checked",
+        }
 
         records.append({
             "message_id": r[0],
@@ -735,7 +752,7 @@ def print_cyberbullying_messages():
             "message_text": r[1],
             "detection_result": r[5],
             "confidence": conf,
-            "status": status_val,
+            "status": status_labels.get(status_val.lower(), status_val.replace("_", " ").title()),
         })
 
     now = datetime.now()
@@ -750,7 +767,7 @@ def print_cyberbullying_messages():
         "printable_cyberbullying_messages.html",
         report_title="OFFICIAL AI CYBERBULLYING DETECTION & FLAGGED MESSAGES LOG",
         report_reference=f"NISH/ADM/CBM-{now.strftime('%Y%m%d-%H%M')}",
-        generated_at=now.strftime("%B %d, %Y &bull; %H:%M EAT"),
+        generated_at=now.strftime("%B %d, %Y \u2022 %H:%M EAT"),
         user_name=session.get("admin_name", "System Administrator"),
         user_role="Institutional Administrator",
         summary=summary,
@@ -772,7 +789,7 @@ def delete_reported_message():
         return "Deletion reason must be 1000 characters or fewer.", 400
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
-            "SELECT message_id FROM Reports WHERE report_id = %s",
+            "SELECT message_id FROM Reports WHERE report_id = ?",
             (report_id,),
         )
         report = cursor.fetchone()
@@ -782,8 +799,8 @@ def delete_reported_message():
             return "The reported message no longer exists.", 404
         cursor.execute(
             """
-            UPDATE Reports SET action_taken = %s, status = %s
-            WHERE report_id = %s
+            UPDATE Reports SET action_taken = ?, status = ?
+            WHERE report_id = ?
             """,
             ("Message deleted by administrator", "Resolved", report_id),
         )
@@ -797,8 +814,8 @@ def update_report(report_id):
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
-            UPDATE Reports SET action_taken = %s, status = %s
-            WHERE report_id = %s
+            UPDATE Reports SET action_taken = ?, status = ?
+            WHERE report_id = ?
             """,
             (request.form.get("action_taken"), request.form.get("status"), report_id),
         )
