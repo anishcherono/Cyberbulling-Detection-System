@@ -9,6 +9,10 @@ import urllib.request
 import uuid
 
 import requests
+from dotenv import load_dotenv
+
+env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(env_file)
 
 logger = logging.getLogger(__name__)
 
