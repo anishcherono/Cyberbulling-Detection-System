@@ -1,26 +1,31 @@
 from datetime import datetime
 import os
-import sqlite3
+import re
+import urllib.parse
 from contextlib import contextmanager
 
 from dotenv import load_dotenv
 from flask import request
+import mysql.connector
 from werkzeug.security import check_password_hash, generate_password_hash
 
 load_dotenv()
 
 MESSAGE_MAX_LENGTH = 2000
 REPORT_REASON_MAX_LENGTH = 1000
-DB_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    os.getenv("SQLITE_DB_PATH", "cyberbullying.db"),
-)
+
+DATABASE_URL = os.getenv("DATABASE_URL", "mysql://root:anish123@localhost:3306/Cyberbulling_system")
 
 
-sqlite3.register_converter(
-    "TIMESTAMP",
-    lambda val: datetime.fromisoformat(val.decode("utf-8").strip()),
-)
+def parse_database_url(url):
+    parsed = urllib.parse.urlparse(url)
+    return {
+        "user": parsed.username or "root",
+        "password": parsed.password or "",
+        "host": parsed.hostname or "localhost",
+        "port": parsed.port or 3306,
+        "database": parsed.path.lstrip("/") or "Cyberbulling_system",
+    }
 
 
 def configure_app(app):
@@ -32,19 +37,54 @@ def configure_app(app):
 
 
 def get_connection():
-    conn = sqlite3.connect(
-        DB_PATH,
-        check_same_thread=False,
-        detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+    db_config = parse_database_url(DATABASE_URL)
+    conn = mysql.connector.connect(
+        host=db_config["host"],
+        user=db_config["user"],
+        password=db_config["password"],
+        database=db_config["database"],
+        port=db_config["port"],
+        autocommit=False,
     )
-    conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
+
+class MySQLCursorWrapper:
+    """Transparent cursor wrapper providing compatibility for queries."""
+
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def _convert_sql(self, sql):
+        converted = re.sub(
+            r"strftime\s*\(\s*'%Y-%m-%d'\s*,\s*([a-zA-Z0-9_.]+)\s*\)",
+            r"DATE_FORMAT(\1, '%Y-%m-%d')",
+            sql,
+            flags=re.IGNORECASE,
+        )
+        converted = re.sub(r"INSERT\s+OR\s+IGNORE", "INSERT IGNORE", converted, flags=re.IGNORECASE)
+        converted = converted.replace("?", "%s")
+        return converted
+
+    def execute(self, sql, params=None):
+        sql = self._convert_sql(sql)
+        if params is None:
+            return self._cursor.execute(sql)
+        return self._cursor.execute(sql, params)
+
+    def executemany(self, sql, seq_of_params):
+        sql = self._convert_sql(sql)
+        return self._cursor.executemany(sql, seq_of_params)
+
+    def __getattr__(self, item):
+        return getattr(self._cursor, item)
 
 
 @contextmanager
 def database_cursor(commit=False):
     connection = get_connection()
-    cursor = connection.cursor()
+    raw_cursor = connection.cursor()
+    cursor = MySQLCursorWrapper(raw_cursor)
     try:
         yield connection, cursor
         if commit:
@@ -53,16 +93,16 @@ def database_cursor(commit=False):
         connection.rollback()
         raise
     finally:
-        close_database(connection, cursor)
+        close_database(connection, raw_cursor)
 
 
 def init_db():
-    """Create all SQLite tables if they do not exist."""
+    """Ensure all MySQL tables exist."""
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Users (
-                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INT AUTO_INCREMENT PRIMARY KEY,
                 full_name VARCHAR(200) NOT NULL,
                 institution_id VARCHAR(100) NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
@@ -71,13 +111,13 @@ def init_db():
                 role VARCHAR(50) NOT NULL,
                 status VARCHAR(30) NOT NULL DEFAULT 'active',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Messages (
-                message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message_id INT AUTO_INCREMENT PRIMARY KEY,
                 sender_id INT NOT NULL,
                 recipient_id INT NULL,
                 message_text TEXT NOT NULL,
@@ -87,13 +127,13 @@ def init_db():
                 date_sent TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (sender_id) REFERENCES Users(user_id) ON DELETE CASCADE,
                 FOREIGN KEY (recipient_id) REFERENCES Users(user_id) ON DELETE SET NULL
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Announcements (
-                announcement_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                announcement_id INT AUTO_INCREMENT PRIMARY KEY,
                 teacher_id INT NOT NULL,
                 title VARCHAR(150) NOT NULL,
                 content TEXT NOT NULL,
@@ -102,13 +142,13 @@ def init_db():
                 status VARCHAR(30) NOT NULL DEFAULT 'published',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (teacher_id) REFERENCES Users(user_id) ON DELETE CASCADE
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS DiscussionReplies (
-                reply_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                reply_id INT AUTO_INCREMENT PRIMARY KEY,
                 message_id INT NULL,
                 announcement_id INT NULL,
                 author_id INT NOT NULL,
@@ -120,26 +160,26 @@ def init_db():
                 FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE CASCADE,
                 FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id) ON DELETE CASCADE,
                 FOREIGN KEY (author_id) REFERENCES Users(user_id) ON DELETE CASCADE
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Alerts (
-                alert_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                alert_id INT AUTO_INCREMENT PRIMARY KEY,
                 message_id INT NOT NULL,
                 alert_type VARCHAR(50) NOT NULL,
                 alert_message TEXT NOT NULL,
                 status VARCHAR(30) NOT NULL DEFAULT 'unread',
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE CASCADE
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Reports (
-                report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_id INT AUTO_INCREMENT PRIMARY KEY,
                 message_id INT NULL,
                 announcement_id INT NULL,
                 reply_id INT NULL,
@@ -149,9 +189,10 @@ def init_db():
                 status VARCHAR(30) NOT NULL DEFAULT 'Pending',
                 date_reported TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE SET NULL,
-                FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id) ON DELETE SET NULL,
+                FOREIGN KEY (announcement_id) REFERENCES Announcements(announcement_id) ON DELETE CASCADE,
+                FOREIGN KEY (reply_id) REFERENCES DiscussionReplies(reply_id) ON DELETE CASCADE,
                 FOREIGN KEY (reported_by) REFERENCES Users(user_id) ON DELETE CASCADE
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
@@ -163,26 +204,26 @@ def init_db():
                 PRIMARY KEY (user_id, message_id),
                 FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE,
                 FOREIGN KEY (message_id) REFERENCES Messages(message_id) ON DELETE CASCADE
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Notifications (
-                notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                notification_id INT AUTO_INCREMENT PRIMARY KEY,
                 user_id INT NOT NULL,
                 notification_type VARCHAR(50) NOT NULL,
                 notification_message TEXT NOT NULL,
                 is_read BOOLEAN NOT NULL DEFAULT FALSE,
                 date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
-            )
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS Donations (
-                donation_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                donation_id INT AUTO_INCREMENT PRIMARY KEY,
                 donor_name VARCHAR(150) NOT NULL DEFAULT 'Anonymous',
                 phone_number VARCHAR(20) NOT NULL,
                 amount DECIMAL(10, 2) NOT NULL,
@@ -193,8 +234,11 @@ def init_db():
                 result_code INT NULL,
                 result_desc VARCHAR(255) NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_donations_status (status),
+                INDEX idx_donations_checkout (checkout_request_id),
+                INDEX idx_donations_merchant (merchant_request_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
             """
         )
 

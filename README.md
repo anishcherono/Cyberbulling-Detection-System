@@ -1,6 +1,6 @@
 # Cyberbullying Detection System - Nish Institution
 
-A web application built with **Python (Flask)** and **Hugging Face Transformers (BERT)** for detecting cyberbullying in student messages and managing incident reports at Nish Institution.
+A web application built with **Python (Flask)**, **MySQL**, and **Hugging Face Transformers (BERT)** for detecting cyberbullying in student messages and managing incident reports at Nish Institution.
 
 ## Features
 - **AI Message Detection**: Checks student messages and replies for cyberbullying using a pre-trained BERT model (`Davephoenix/bert-bullying-detector`).
@@ -8,7 +8,7 @@ A web application built with **Python (Flask)** and **Hugging Face Transformers 
   - Students can register, send messages, post in discussions, and report abusive messages.
   - Lecturers can post course announcements and monitor discussions.
   - Admins can review flagged messages, warn/restrict/ban accounts, and print user/incident reports.
-- **Database Support**: Uses a lightweight **SQLite** database (`cyberbullying.db`) that is created automatically on startup.
+- **Database Support**: Built on a robust **MySQL** relational database (`Cyberbulling_system`).
 - **M-Pesa Donations**: Safaricom Daraja STK Push donations.
 
 ---
@@ -21,13 +21,19 @@ git clone https://github.com/anishcherono/Cyberbulling-Detection-System.git
 cd Cyberbulling-Detection-System
 ```
 
-### 2. Install dependencies and start the application
+### 2. Configure Database in `.env`
+Set your MySQL database connection URL in `.env`:
+```env
+DATABASE_URL=mysql://root:your_password@localhost:3306/Cyberbulling_system
+```
+
+### 3. Install dependencies and start the application
 ```bash
 pip install -r requirements.txt
 python app.py
 ```
 
-When you run `python app.py`, it automatically sets up the SQLite database (`cyberbullying.db`), creates the default admin account, and opens the portal at `http://127.0.0.1:5000/`.
+When you run `python app.py`, it connects to MySQL, initializes the tables, creates the default admin account, and opens the portal at `http://127.0.0.1:5000/`.
 
 ---
 
