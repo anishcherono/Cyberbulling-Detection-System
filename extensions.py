@@ -326,9 +326,19 @@ def get_message_from_request():
 
 def close_database(connection, cursor):
     if cursor is not None:
-        cursor.close()
+        try:
+            cursor.fetchall()
+        except Exception:
+            pass
+        try:
+            cursor.close()
+        except Exception:
+            pass
     if connection is not None:
-        connection.close()
+        try:
+            connection.close()
+        except Exception:
+            pass
 
 
 def normalize_role(role):

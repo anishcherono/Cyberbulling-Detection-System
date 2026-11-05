@@ -231,3 +231,56 @@ def process_stk_callback(callback_data):
         "phone_number": phone_number,
         "transaction_date": transaction_date,
     }
+
+
+def query_stk_status(checkout_request_id):
+    """
+    Directly queries Safaricom for STK push status.
+    Essential for localhost / student projects where webhooks cannot reach localhost.
+    """
+    cfg = get_mpesa_config()
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    password = generate_password(cfg["shortcode"], cfg["passkey"], timestamp)
+    
+    try:
+        token = get_oauth_token()
+    except Exception as exc:
+        logger.warning("Could not get OAuth token for query: %s", exc)
+        return None
+
+    query_url = f"{cfg['base_url']}/mpesa/stkpushquery/v1/query"
+    payload = {
+        "BusinessShortCode": cfg["shortcode"],
+        "Password": password,
+        "Timestamp": timestamp,
+        "CheckoutRequestID": checkout_request_id,
+    }
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+        "User-Agent": "Mozilla/5.0",
+    }
+    
+    try:
+        resp = requests.post(query_url, json=payload, headers=headers, timeout=10)
+        data = resp.json() if resp.content else {}
+        result_code = data.get("ResultCode")
+        result_desc = data.get("ResultDesc", "")
+        
+        if result_code is not None:
+            code = int(result_code)
+            status = "COMPLETED" if code == 0 else "FAILED"
+            if code == 1032:
+                status = "CANCELLED"
+            return {
+                "success": True,
+                "status": status,
+                "result_code": code,
+                "result_desc": result_desc,
+                "merchant_request_id": data.get("MerchantRequestID"),
+                "checkout_request_id": data.get("CheckoutRequestID"),
+            }
+    except Exception as exc:
+        logger.warning("Error querying Safaricom STK status: %s", exc)
+        
+    return None

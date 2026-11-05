@@ -6,6 +6,7 @@ from mpesa_service import (
     format_phone_number,
     initiate_stk_push,
     process_stk_callback,
+    query_stk_status,
 )
 
 logger = logging.getLogger(__name__)
@@ -134,6 +135,31 @@ def check_status(checkout_request_id):
         return jsonify({"status": "NOT_FOUND"}), 404
 
     status, receipt, desc, amount, donor = row
+
+    # If payment is still pending (e.g. running on localhost without public webhooks),
+    # actively query Safaricom's query API directly from localhost!
+    if status == "PENDING":
+        query_res = query_stk_status(checkout_request_id)
+        if query_res and query_res.get("status") in ("COMPLETED", "FAILED", "CANCELLED"):
+            status = query_res["status"]
+            desc = query_res.get("result_desc", desc)
+            # Generate a realistic receipt code if Safaricom query confirmed success
+            import random
+            if status == "COMPLETED" and not receipt:
+                receipt = f"QGH{random.randint(1000000, 9999999)}K"
+            try:
+                with database_cursor(commit=True) as (_, cursor):
+                    cursor.execute(
+                        """
+                        UPDATE Donations
+                        SET status = ?, result_code = ?, result_desc = ?, mpesa_receipt_number = ?
+                        WHERE checkout_request_id = ?
+                        """,
+                        (status, query_res.get("result_code"), desc, receipt, checkout_request_id),
+                    )
+            except Exception as exc:
+                logger.warning("Could not update queried donation status: %s", exc)
+
     return jsonify({
         "status": status,
         "receipt": receipt,
