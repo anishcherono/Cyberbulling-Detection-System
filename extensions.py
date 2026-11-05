@@ -92,10 +92,17 @@ class MySQLCursorWrapper:
         self._cursor = cursor
 
     def _convert_sql(self, sql):
+        # Convert any strftime('...', col) to DATE_FORMAT(col, '...')
+        converted = re.sub(
+            r"strftime\s*\(\s*'%Y-%m-%d\s+%H:%M'\s*,\s*([a-zA-Z0-9_.]+)\s*\)",
+            r"DATE_FORMAT(\1, '%Y-%m-%d %H:%i')",
+            sql,
+            flags=re.IGNORECASE,
+        )
         converted = re.sub(
             r"strftime\s*\(\s*'%Y-%m-%d'\s*,\s*([a-zA-Z0-9_.]+)\s*\)",
             r"DATE_FORMAT(\1, '%Y-%m-%d')",
-            sql,
+            converted,
             flags=re.IGNORECASE,
         )
         converted = re.sub(r"INSERT\s+OR\s+IGNORE", "INSERT IGNORE", converted, flags=re.IGNORECASE)

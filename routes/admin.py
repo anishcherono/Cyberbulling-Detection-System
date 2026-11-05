@@ -137,9 +137,9 @@ def admin_dashboard():
         result_breakdown = cursor.fetchall()
         cursor.execute(
             """
-            SELECT strftime('%Y-%m-%d', date_sent), COUNT(*) FROM Messages
-            GROUP BY strftime('%Y-%m-%d', date_sent)
-            ORDER BY strftime('%Y-%m-%d', date_sent) ASC LIMIT 30
+            SELECT DATE_FORMAT(date_sent, '%Y-%m-%d'), COUNT(*) FROM Messages
+            GROUP BY DATE_FORMAT(date_sent, '%Y-%m-%d')
+            ORDER BY DATE_FORMAT(date_sent, '%Y-%m-%d') ASC LIMIT 30
             """
         )
         daily_activity = cursor.fetchall()

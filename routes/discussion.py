@@ -283,7 +283,7 @@ def blog():
         cursor.execute(
             """
             SELECT m.message_id, u.full_name, u.role, m.message_text,
-                   strftime('%Y-%m-%d %H:%M', m.date_sent) AS posted_at,
+                   DATE_FORMAT(m.date_sent, '%Y-%m-%d %H:%i') AS posted_at,
                    m.sender_id
             FROM Messages m
             JOIN Users u ON m.sender_id = u.user_id
@@ -297,7 +297,7 @@ def blog():
         cursor.execute(
             """
             SELECT a.announcement_id, u.full_name, a.title, a.content,
-                   strftime('%Y-%m-%d %H:%M', a.date_created) AS posted_at,
+                   DATE_FORMAT(a.date_created, '%Y-%m-%d %H:%i') AS posted_at,
                    a.teacher_id
             FROM Announcements a
             JOIN Users u ON a.teacher_id = u.user_id
@@ -311,7 +311,7 @@ def blog():
             """
             SELECT r.reply_id, r.message_id, r.announcement_id,
                    u.full_name, u.role, r.reply_text,
-                   strftime('%Y-%m-%d %H:%M', r.date_created) AS posted_at,
+                   DATE_FORMAT(r.date_created, '%Y-%m-%d %H:%i') AS posted_at,
                    r.author_id
             FROM DiscussionReplies r
             JOIN Users u ON r.author_id = u.user_id
