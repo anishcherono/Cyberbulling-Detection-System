@@ -42,6 +42,7 @@ from werkzeug.exceptions import HTTPException
 from extensions import (
     configure_app,
     database_cursor,
+    ensure_database_exists,
     ensure_default_admin,
     init_db,
 )
@@ -58,6 +59,7 @@ load_dotenv()
 def create_app():
     application = Flask(__name__)
     configure_app(application)
+    ensure_database_exists()
     init_db()
     ensure_default_admin()
     application.register_blueprint(auth_bp)

@@ -36,17 +36,53 @@ def configure_app(app):
         return {"csrf_token": lambda: ""}
 
 
+def ensure_database_exists():
+    """Ensure the target MySQL schema exists before connecting."""
+    db_config = parse_database_url(DATABASE_URL)
+    db_name = db_config["database"]
+    try:
+        conn = mysql.connector.connect(
+            host=db_config["host"],
+            user=db_config["user"],
+            password=db_config["password"],
+            port=db_config["port"],
+            autocommit=True,
+        )
+        cur = conn.cursor()
+        cur.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;")
+        cur.close()
+        conn.close()
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Could not auto-create database '%s': %s", db_name, exc)
+
+
 def get_connection():
     db_config = parse_database_url(DATABASE_URL)
-    conn = mysql.connector.connect(
-        host=db_config["host"],
-        user=db_config["user"],
-        password=db_config["password"],
-        database=db_config["database"],
-        port=db_config["port"],
-        autocommit=False,
-    )
-    return conn
+    try:
+        conn = mysql.connector.connect(
+            host=db_config["host"],
+            user=db_config["user"],
+            password=db_config["password"],
+            database=db_config["database"],
+            port=db_config["port"],
+            autocommit=False,
+        )
+        return conn
+    except mysql.connector.Error as err:
+        # If database does not exist (1049), auto-create and reconnect
+        if err.errno == 1049:
+            ensure_database_exists()
+            conn = mysql.connector.connect(
+                host=db_config["host"],
+                user=db_config["user"],
+                password=db_config["password"],
+                database=db_config["database"],
+                port=db_config["port"],
+                autocommit=False,
+            )
+            return conn
+        raise
 
 
 class MySQLCursorWrapper:
