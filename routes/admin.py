@@ -811,12 +811,14 @@ def delete_reported_message():
 def update_report(report_id):
     if not session.get("admin_logged_in"):
         return _admin_login_redirect()
+    action_taken = (request.form.get("action_taken") or "Reviewed").strip()
+    status = (request.form.get("status") or "Reviewed").strip()
     with database_cursor(commit=True) as (_, cursor):
         cursor.execute(
             """
             UPDATE Reports SET action_taken = ?, status = ?
             WHERE report_id = ?
             """,
-            (request.form.get("action_taken"), request.form.get("status"), report_id),
+            (action_taken, status, report_id),
         )
     return redirect(url_for("admin.reports"))
