@@ -518,10 +518,12 @@
                     <td>{{ user[3] }}</td>
                     <td><span class="badge" style="background:#fff3cd; color:#856404; padding:4px 8px; border-radius:4px; font-weight:600; font-size:12px;">Restricted</span></td>
                     <td>
-                        {% if user[5] %}
+                        {% if user[5] and user[5] is number %}
                         <a href="{{ url_for('admin.view_admin_notice', notification_id=user[5]) }}" target="_blank" style="color:#174A7C; font-weight:600; text-decoration:underline;">
                             View Notice (PDF/Print)
                         </a>
+                        {% elif user[5] %}
+                        <span style="color:#495057; font-size:12px;">Active Restriction Notice</span>
                         {% else %}
                         <span style="color:#6c757d;">Standard Restriction</span>
                         {% endif %}
