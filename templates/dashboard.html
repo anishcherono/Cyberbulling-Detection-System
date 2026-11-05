@@ -371,8 +371,6 @@
 
     <div class="nav">
         <a href="/admin">Dashboard</a>
-        <a href="#restricted-accounts" style="color: #fef08a; font-weight: bold;">Restricted Accounts</a>
-        <a href="#banned-accounts" style="color: #fca5a5; font-weight: bold;">Banned Accounts</a>
         <a href="/reports">Reports</a>
         <a href="/admin/users/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print All Users</a>
         <a href="/admin/students/print" target="_blank" style="color: #90cdf4; font-weight: bold;">&#128438; Print Students</a>
@@ -501,11 +499,8 @@
 
         <!-- RESTRICTED ACCOUNTS -->
 
-        <div class="section student-directory" id="restricted-accounts">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:10px; margin-bottom:15px;">
-                <h2 style="margin:0; border:none; padding:0;">Temporarily Restricted Accounts</h2>
-                <span style="background:#fef3c7; color:#92400e; padding:4px 10px; border-radius:20px; font-weight:bold; font-size:13px;">{{ restricted_users|length }} Restricted</span>
-            </div>
+        <div class="section student-directory">
+            <h2>Temporarily Restricted Accounts</h2>
             {% if restricted_users %}
             <table class="restricted-account-table">
                 <tr>
@@ -549,11 +544,8 @@
 
         <!-- BANNED ACCOUNTS -->
 
-        <div class="section student-directory" id="banned-accounts">
-            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #e2e8f0; padding-bottom:10px; margin-bottom:15px;">
-                <h2 style="margin:0; border:none; padding:0;">Ban Enforcement & Banned Accounts</h2>
-                <span style="background:#fee2e2; color:#991b1b; padding:4px 10px; border-radius:20px; font-weight:bold; font-size:13px;">{{ banned_users|length }} Banned</span>
-            </div>
+        <div class="section student-directory">
+            <h2>Ban Enforcement</h2>
             {% if banned_users %}
             <table class="banned-account-table">
                 <tr>
