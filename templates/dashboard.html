@@ -504,24 +504,32 @@
             {% if restricted_users %}
             <table class="restricted-account-table">
                 <tr>
-                    <th>User name</th>
+                    <th>Student</th>
                     <th>Student ID</th>
-                    <th>Institution email</th>
+                    <th>Institution Email</th>
                     <th>Status</th>
-                    <th>Admin message</th>
+                    <th>Sanction / Notice</th>
                     <th>Action</th>
                 </tr>
                 {% for user in restricted_users %}
                 <tr>
-                    <td>{{ user[1] }}</td>
-                    <td>{{ user[2] or "Not provided" }}</td>
+                    <td><strong>{{ user[1] }}</strong></td>
+                    <td>{{ user[2] or "-" }}</td>
                     <td>{{ user[3] }}</td>
-                    <td>{{ user[4] }}</td>
-                    <td class="admin-message-cell">{{ user[5] or "No administrator message available." }}</td>
+                    <td><span class="badge" style="background:#fff3cd; color:#856404; padding:4px 8px; border-radius:4px; font-weight:600; font-size:12px;">Restricted</span></td>
                     <td>
-                        <form action="{{ url_for('admin.remove_restriction', user_id=user[0]) }}" method="POST">
+                        {% if user[5] %}
+                        <a href="{{ url_for('admin.view_admin_notice', notification_id=user[5]) }}" target="_blank" style="color:#174A7C; font-weight:600; text-decoration:underline;">
+                            View Notice (PDF/Print)
+                        </a>
+                        {% else %}
+                        <span style="color:#6c757d;">Standard Restriction</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <form action="{{ url_for('admin.remove_restriction', user_id=user[0]) }}" method="POST" style="margin:0;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="read-button">Remove restriction</button>
+                            <button type="submit" class="read-button" style="padding:6px 12px; font-size:12px;">Lift Restriction</button>
                         </form>
                     </td>
                 </tr>

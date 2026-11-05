@@ -91,7 +91,7 @@ def admin_dashboard():
         cursor.execute(
             """
             SELECT u.user_id, u.full_name, u.institution_id, u.email, u.status,
-                   n.notification_message
+                   n.notification_id
             FROM Users u
             LEFT JOIN Notifications n
               ON n.user_id = u.user_id
