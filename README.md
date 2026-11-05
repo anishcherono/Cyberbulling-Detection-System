@@ -1,74 +1,57 @@
-# Cyberbullying Detection System - Nish Institution
+# Nish Institution - Cyberbullying Detection & Prevention System
 
-A web application built with **Python (Flask)**, **MySQL**, and **Hugging Face Transformers (BERT)** for detecting cyberbullying in student messages and managing incident reports at Nish Institution.
+A web application developed for final year project to detect and moderate cyberbullying messages across student communication channels and campus discussion forums.
 
-## Features
-- **AI Message Detection**: Checks student messages and replies for cyberbullying using a pre-trained BERT model (`Davephoenix/bert-bullying-detector`).
-- **Student, Lecturer & Admin Portals**:
-  - Students can register, send messages, post in discussions, and report abusive messages.
-  - Lecturers can post course announcements and monitor discussions.
-  - Admins can review flagged messages, warn/restrict/ban accounts, and print user/incident reports.
-- **Database Support**: Built on a robust **MySQL** relational database (`Cyberbulling_system`).
-- **M-Pesa Donations**: Safaricom Daraja STK Push donations.
+## Overview
+- **Message Filtering**: Uses a pre-trained BERT text classification model (`Davephoenix/bert-bullying-detector`) to detect harassment, insults, and toxic messages.
+- **Role-Based Portals**:
+  - **Student Portal**: Send direct messages, view discussions, report incidents, and receive notifications.
+  - **Lecturer Portal**: Broadcast announcements and review student interactions.
+  - **Admin Dashboard**: Review AI-flagged alerts, manage account restrictions, and generate printable reports.
+- **Tech Stack**: Python (Flask), MySQL, HTML/CSS, Hugging Face Transformers.
 
 ---
 
-## How to Run the Project
+## Setup & Installation
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/anishcherono/Cyberbulling-Detection-System.git
-cd Cyberbulling-Detection-System
-```
+### 1. Requirements
+- Python 3.10+
+- MySQL Server (running locally on port 3306)
 
-### 2. Configure Database in `.env`
-Set your MySQL database connection URL in `.env`:
+### 2. Configure Environment (`.env`)
+Create or edit your `.env` file with your MySQL credentials:
 ```env
 DATABASE_URL=mysql://root:your_password@localhost:3306/Cyberbulling_system
+FLASK_SECRET_KEY=your_secret_key
 ```
 
-### 3. Install dependencies and start the application
+### 3. Install Dependencies
 ```bash
 pip install -r requirements.txt
-python app.py
 ```
 
-When you run `python app.py`, it connects to MySQL, initializes the tables, creates the default admin account, and opens the portal at `http://127.0.0.1:5000/`.
+### 4. Run Application
+```bash
+python app.py
+```
+The server will start at `http://127.0.0.1:5000/`.
 
 ---
 
-## Login Details
+## Demo Accounts
 
-### 1. Administrator Account (`@admin.nish.edu`)
-- **URL**: `http://127.0.0.1:5000/admin/login`
-- **Email**: `admin@admin.nish.edu`
-- **Password**: `admin123`
+For demonstration and testing purposes:
 
-### 2. Lecturer Accounts (`@lecturers.nish.edu`) — 4 Lecturers
-- **URL**: `http://127.0.0.1:5000/lecturer-login`
-- **Password (all lecturers)**: `lecturer123`
-- **Emails**:
-  - `kelvin.kiprop@lecturers.nish.edu` (`LEC-2026-0001` - Dr. Kelvin Kiprop)
-  - `grace.wanjiku@lecturers.nish.edu` (`LEC-2026-0002` - Prof. Grace Wanjiku)
-  - `samuel.omondi@lecturers.nish.edu` (`LEC-2026-0003` - Dr. Samuel Omondi)
-  - `amina.hassan@lecturers.nish.edu` (`LEC-2026-0004` - Dr. Amina Hassan)
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| **Administrator** | `admin@admin.nish.edu` | `admin123` |
+| **Lecturer** | `kelvin.kiprop@lecturers.nish.edu` | `lecturer123` |
+| **Student** | `anish.cherono@students.nish.edu` | `student123` |
 
-### 3. Student Accounts (`@students.nish.edu`) — 10 Students
-- **URL**: `http://127.0.0.1:5000/student-login`
-- **Password (all students)**: `student123`
-- **Emails**:
-  - `anish.cherono@students.nish.edu` (`STU-2026-0001`)
-  - `brian.otieno@students.nish.edu` (`STU-2026-0002`)
-  - `cynthia.chebet@students.nish.edu` (`STU-2026-0003`)
-  - `david.mwangi@students.nish.edu` (`STU-2026-0004` - Warning Issued)
-  - `esther.mutua@students.nish.edu` (`STU-2026-0005`)
-  - `felix.kamau@students.nish.edu` (`STU-2026-0006` - Temporarily Restricted)
-  - `gloria.achieng@students.nish.edu` (`STU-2026-0007`)
-  - `hassan.abdi@students.nish.edu` (`STU-2026-0008`)
-  - `irene.njoroge@students.nish.edu` (`STU-2026-0009`)
-  - `kevin.kipchumba@students.nish.edu` (`STU-2026-0010` - Banned)
+*New student and lecturer accounts can also be created via the registration pages.*
 
 ---
 
 ## Author
-**Anish Cherono**
+**Anish Cherono**  
+Nish Institution
